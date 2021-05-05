@@ -39,6 +39,11 @@
       <artifactId>smallrye-reactive-messaging-in-memory</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.optaplanner</groupId>
+      <artifactId>optaplanner-test</artifactId>
+      <scope>test</scope>
+    </dependency>
 <!--    <dependency>
       <groupId>io.github.embeddedkafka</groupId>
       <artifactId>embedded-kafka_2.13</artifactId>

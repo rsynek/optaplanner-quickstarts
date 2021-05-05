@@ -22,6 +22,8 @@ import javax.inject.Inject;
 import org.acme.callcenter.message.AddAgentEvent;
 import org.acme.callcenter.message.AddCallEvent;
 import org.acme.callcenter.message.BestSolutionEvent;
+import org.acme.callcenter.message.ProlongCallEvent;
+import org.acme.callcenter.message.RemoveCallEvent;
 import org.acme.callcenter.message.StartSolverEvent;
 import org.acme.callcenter.message.StopSolverEvent;
 import org.acme.callcenter.solver.SolverService;
@@ -47,6 +49,16 @@ public class CallCenterMessageHandler {
     @Incoming("add_call")
     public void handleAddCall(AddCallEvent addCallEvent) {
         solverService.addCall(addCallEvent.getCall());
+    }
+
+    @Incoming("remove_call")
+    public void handleRemoveCall(RemoveCallEvent removeCallEvent) {
+        solverService.removeCall(removeCallEvent.getCallId());
+    }
+
+    @Incoming("prolong_call")
+    public void handleProlongCall(ProlongCallEvent prolongCallEvent) {
+        solverService.prolongCall(prolongCallEvent.getCallId());
     }
 
     @Incoming("start_solver")

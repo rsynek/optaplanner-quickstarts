@@ -28,6 +28,7 @@ import javax.ws.rs.core.MediaType;
 
 import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.domain.CallCenter;
+import org.acme.callcenter.portable.PortableCallCenter;
 import org.acme.callcenter.service.SimulationService;
 import org.acme.callcenter.service.SolverService;
 
@@ -53,20 +54,19 @@ public class CallCenterResource {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public CallCenter get() {
+    public PortableCallCenter get() {
         if (solvingError.get() != null) {
             throw new IllegalStateException("Exception occurred during solving.", solvingError.get());
         }
         CallCenter callCenter = bestSolution.get();
         callCenter.setSolving(solving.get());
-        return callCenter;
+        return PortableCallCenter.fromCallCenter(callCenter);
     }
 
     @POST
     @Path("solve")
     public void solve() {
         solverService.startSolving(DataGenerator.PROBLEM_ID, bestSolution.get(), callCenter -> {
-            System.out.println("new solution accepted.");
             bestSolution.set(callCenter);
             simulationService.onNewBestSolution(callCenter);
         });

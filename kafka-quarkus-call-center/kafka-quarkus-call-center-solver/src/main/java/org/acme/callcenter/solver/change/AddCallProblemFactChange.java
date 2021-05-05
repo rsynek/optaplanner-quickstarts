@@ -37,4 +37,12 @@ public class AddCallProblemFactChange implements ProblemFactChange<CallCenter> {
         scoreDirector.afterEntityAdded(call);
         scoreDirector.triggerVariableListeners();
     }
+
+    @Override
+    public String toString() {
+        String callId = call == null ? "null" : call.getId().toString();
+        return "AddCallProblemFactChange{" +
+                "callId=" + callId +
+                '}';
+    }
 }

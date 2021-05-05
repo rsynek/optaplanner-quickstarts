@@ -15,6 +15,7 @@
  */
 
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 
@@ -49,7 +50,12 @@ public class CallCenterMarshallingTest {
         smith.setNextCall(call);
         call.setAgent(smith);
 
-        CallCenter callCenter = new CallCenter(EnumSet.allOf(Skill.class), Collections.singletonList(smith), Collections.singletonList(call));
+        Call secondCall = new Call(3L, "12-45787-5454");
+        call.setNextCall(secondCall);
+        secondCall.setAgent(smith);
+        secondCall.setPreviousCallOrAgent(call);
+
+        CallCenter callCenter = new CallCenter(EnumSet.allOf(Skill.class), Collections.singletonList(smith), Arrays.asList(call, secondCall));
 
         String callCenterJson = objectMapper.writeValueAsString(callCenter);
 

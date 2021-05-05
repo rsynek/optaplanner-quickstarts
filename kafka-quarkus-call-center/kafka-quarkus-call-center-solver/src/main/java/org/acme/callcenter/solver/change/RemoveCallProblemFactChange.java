@@ -35,20 +35,38 @@ public class RemoveCallProblemFactChange implements ProblemFactChange<CallCenter
         CallCenter callCenter = scoreDirector.getWorkingSolution();
         Call call = new Call(callId, null);
         Call workingCall = scoreDirector.lookUpWorkingObjectOrReturnNull(call);
-        if (workingCall != null) {
-            PreviousCallOrAgent previousCallOrAgent = workingCall.getPreviousCallOrAgent();
-
-            Call nextCall = workingCall.getNextCall();
-            if (nextCall != null) {
-                scoreDirector.beforeVariableChanged(nextCall, "previousCallOrAgent");
-                nextCall.setPreviousCallOrAgent(previousCallOrAgent);
-                scoreDirector.afterVariableChanged(nextCall, "previousCallOrAgent");
-            }
-
-            scoreDirector.beforeEntityRemoved(workingCall);
-            callCenter.getCalls().remove(workingCall);
-            scoreDirector.afterEntityRemoved(workingCall);
-            scoreDirector.triggerVariableListeners();
+        if (workingCall == null) {
+            return;
+            //throw new IllegalStateException("Working call does not exist (" + callId + ")");
         }
+
+        PreviousCallOrAgent previousCallOrAgent = workingCall.getPreviousCallOrAgent();
+
+        Call nextCall = workingCall.getNextCall();
+        if (nextCall != null) {
+            scoreDirector.beforeVariableChanged(nextCall, "previousCallOrAgent");
+            nextCall.setPreviousCallOrAgent(previousCallOrAgent);
+            scoreDirector.afterVariableChanged(nextCall, "previousCallOrAgent");
+        }
+/*
+        if (previousCallOrAgent != null) {
+            scoreDirector.beforeVariableChanged(previousCallOrAgent, "nextCall");
+            previousCallOrAgent.setNextCall(nextCall);
+            scoreDirector.afterVariableChanged(previousCallOrAgent, "nextCall");
+        }
+*/
+        scoreDirector.beforeEntityRemoved(workingCall);
+        if (!callCenter.getCalls().remove(workingCall)) {
+            throw new IllegalStateException("Working solution does not contains the call (" + callId + ").");
+        }
+        scoreDirector.afterEntityRemoved(workingCall);
+        scoreDirector.triggerVariableListeners();
+    }
+
+    @Override
+    public String toString() {
+        return "RemoveCallProblemFactChange{" +
+                "callId=" + callId +
+                '}';
     }
 }

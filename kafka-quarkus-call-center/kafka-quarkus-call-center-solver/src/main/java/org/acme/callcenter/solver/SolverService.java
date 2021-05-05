@@ -49,8 +49,9 @@ public class SolverService {
 
     private final ManagedExecutor managedExecutor;
 
+    private final SolverFactory<CallCenter> solverFactory;
     // TODO: Replace by @Inject SolverManager once https://issues.redhat.com/browse/PLANNER-2141 is resolved.
-    private final Solver<CallCenter> solver;
+    private Solver<CallCenter> solver;
 
     private AtomicBoolean solving = new AtomicBoolean(false);
     private CompletableFuture<?> completableSolverFuture;
@@ -58,7 +59,7 @@ public class SolverService {
 
     @Inject
     public SolverService(SolverFactory<CallCenter> solverFactory, @Default ManagedExecutor executorService) {
-        solver = solverFactory.buildSolver();
+        this.solverFactory = solverFactory;
         this.managedExecutor = executorService;
     }
 
@@ -72,12 +73,20 @@ public class SolverService {
         solver.addProblemFactChanges(pinCallProblemFactChanges);
     }
 
-    public void startSolving(CallCenter inputProblem,
+    public synchronized void startSolving(CallCenter inputProblem,
             Consumer<BestSolutionChangedEvent<CallCenter>> bestSolutionChangedEventConsumer, Consumer<Throwable> errorHandler) {
+        if (isSolving()) {
+            System.out.println("The solver has been already running. Skipping.");
+            return;
+        }
+        solver = solverFactory.buildSolver();
         completableSolverFuture = managedExecutor.runAsync(() -> {
             solver.addEventListener(event -> {
                 if (event.isEveryProblemFactChangeProcessed() && event.getNewBestScore().isSolutionInitialized()) {
-                    System.out.println("best solution produced.");
+                    // TODO: this is race condition with PFC incoming. => we should lock it
+                    // TODO: meanwhile, more PFC might have been added; if the solver is restarted before we have new best solution, we loose them.
+                    waitingProblemFactChanges.clear();
+                    System.out.println("best solution produced. Score (" + event.getNewBestScore() + ")");
                     pinCallAssignedToAgents(event.getNewBestSolution().getCalls());
                     bestSolutionChangedEventConsumer.accept(event);
                 }
@@ -89,12 +98,19 @@ public class SolverService {
                 throwable.printStackTrace();
                 errorHandler.accept(throwable);
             }
-            solver.addProblemFactChanges(new ArrayList<>(waitingProblemFactChanges));
         });
+
+        if (!waitingProblemFactChanges.isEmpty()) {
+            System.out.println("Adding (" + waitingProblemFactChanges.size() + ") waiting changes.");
+            waitingProblemFactChanges.forEach(callCenterProblemFactChange -> {
+                System.out.println(callCenterProblemFactChange);
+            });
+            solver.addProblemFactChanges(new ArrayList<>(waitingProblemFactChanges));
+        }
         solving.set(true);
     }
 
-    public void stopSolving() {
+    public synchronized void stopSolving() {
         solving.set(false);
         if (completableSolverFuture != null) {
             solver.terminateEarly();
@@ -115,15 +131,17 @@ public class SolverService {
     }
 
     public void addCall(Call call) {
-        System.out.println("Call added");
+     //   System.out.println("Call added (" + call.getId() + ").");
         registerProblemFactChange(new AddCallProblemFactChange(call));
     }
 
     public void removeCall(long callId) {
+      //  System.out.println("Call removed (" + callId + ").");
         registerProblemFactChange(new RemoveCallProblemFactChange(callId));
     }
 
     public void prolongCall(long callId) {
+      //  System.out.println("Call prolonged");
         registerProblemFactChange(new ProlongCallByMinuteProblemFactChange(callId));
     }
 
@@ -131,13 +149,12 @@ public class SolverService {
         registerProblemFactChange(new AddAgentProblemFactChange(agent));
     }
 
-    private void registerProblemFactChange(ProblemFactChange<CallCenter> problemFactChange) {
+    private synchronized void registerProblemFactChange(ProblemFactChange<CallCenter> problemFactChange) {
+        waitingProblemFactChanges.add(problemFactChange);
         if (isSolving()) {
             assertSolverIsAlive();
             solver.addProblemFactChange(problemFactChange);
-            System.out.println("PFC added.");
-        } else {
-            waitingProblemFactChanges.add(problemFactChange);
+            System.out.println(problemFactChange);
         }
     }
 

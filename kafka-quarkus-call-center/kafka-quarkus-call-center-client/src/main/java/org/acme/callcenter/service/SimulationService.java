@@ -30,7 +30,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.acme.callcenter.data.DataGenerator;
-import org.acme.callcenter.domain.Agent;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 
@@ -62,6 +61,7 @@ public class SimulationService {
     private ScheduledFuture<?> scheduleCallEnd(Call call, long delay, TimeUnit timeUnit) {
         return scheduledExecutorService.schedule(() -> {
             callsInProgress.computeIfPresent(call.getId(), (callId, callInProgress) -> {
+                System.out.println("Automatically removing a call: " + callId);
                 solverService.removeCall(DataGenerator.PROBLEM_ID, callId);
                 return null;
             });
@@ -133,7 +133,7 @@ public class SimulationService {
      */
     public void onNewBestSolution(CallCenter newBestSolution) {
         newBestSolution.getCalls().forEach(call -> {
-            if (call.getPreviousCallOrAgent() != null && call.getPreviousCallOrAgent() instanceof Agent) {
+            if (call.isPinned()) {
                 callsInProgress.computeIfAbsent(call.getId(), callId -> {
                     // Schedule finishing a call by an agent.
                     ScheduledFuture<?> existingCallScheduledFuture =

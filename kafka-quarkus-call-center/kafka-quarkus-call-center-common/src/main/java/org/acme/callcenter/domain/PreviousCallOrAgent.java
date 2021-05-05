@@ -23,20 +23,21 @@ import org.optaplanner.core.api.domain.lookup.PlanningId;
 import org.optaplanner.core.api.domain.variable.InverseRelationShadowVariable;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
 @JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = Agent.class, name = "Agent"),
-    @JsonSubTypes.Type(value = Call.class, name = "Call")
+    @JsonSubTypes.Type(value = Agent.class, name = "agent"),
+    @JsonSubTypes.Type(value = Call.class, name = "call")
 })
 @PlanningEntity
 public abstract class PreviousCallOrAgent {
 
     private Long id;
 
-  //  @JsonIgnore
+    @JsonManagedReference
     @InverseRelationShadowVariable(sourceVariableName = "previousCallOrAgent")
     protected Call nextCall;
 

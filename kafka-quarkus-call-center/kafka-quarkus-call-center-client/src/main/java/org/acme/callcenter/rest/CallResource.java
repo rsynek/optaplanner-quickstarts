@@ -38,6 +38,7 @@ public class CallResource {
     @DELETE
     @Path("{id}")
     public void deleteCall(@PathParam("id") long id) {
+        System.out.println("Deleting a call id: " + id);
         solverService.removeCall(DataGenerator.PROBLEM_ID, id);
     }
 

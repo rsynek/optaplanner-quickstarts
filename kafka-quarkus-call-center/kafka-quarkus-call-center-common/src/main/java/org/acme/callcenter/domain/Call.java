@@ -15,11 +15,9 @@ import org.optaplanner.core.api.domain.variable.PlanningVariable;
 import org.optaplanner.core.api.domain.variable.PlanningVariableGraphType;
 import org.optaplanner.core.api.domain.variable.PlanningVariableReference;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 
-@JsonIdentityInfo(generator = ObjectIdGenerators.PropertyGenerator.class, property = "id")
 @PlanningEntity
 public class Call extends PreviousCallOrAgent {
 
@@ -32,11 +30,10 @@ public class Call extends PreviousCallOrAgent {
     @PlanningPin
     private boolean pinned;
 
-    @JsonIgnore
+    @JsonBackReference
     @PlanningVariable(valueRangeProviderRefs = { "agentRange", "callRange" }, graphType = PlanningVariableGraphType.CHAINED)
     private PreviousCallOrAgent previousCallOrAgent;
 
-    //@JsonIgnore
     @AnchorShadowVariable(sourceVariableName = "previousCallOrAgent")
     private Agent agent;
 
@@ -167,5 +164,10 @@ public class Call extends PreviousCallOrAgent {
     @Override
     public int hashCode() {
         return Objects.hash(getId());
+    }
+
+    @Override
+    public String toString() {
+        return "Call{" + getId() + "}";
     }
 }

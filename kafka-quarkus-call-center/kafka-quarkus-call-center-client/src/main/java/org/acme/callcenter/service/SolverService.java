@@ -93,6 +93,7 @@ public class SolverService {
     }
 
     public void addCall(long problemId, Call call) {
+        System.out.println("Automatically creating a call: " + call.getId());
         AddCallEvent addCallEvent = new AddCallEvent(problemId, call);
         addCallEventEmitter.send(addCallEvent);
     }
