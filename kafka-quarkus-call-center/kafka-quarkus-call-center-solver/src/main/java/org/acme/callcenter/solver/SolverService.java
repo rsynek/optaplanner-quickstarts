@@ -76,8 +76,7 @@ public class SolverService {
     public synchronized void startSolving(CallCenter inputProblem,
             Consumer<BestSolutionChangedEvent<CallCenter>> bestSolutionChangedEventConsumer, Consumer<Throwable> errorHandler) {
         if (isSolving()) {
-            System.out.println("The solver has been already running. Skipping.");
-            return;
+            throw new IllegalStateException("The solver has been already running.");
         }
         solver = solverFactory.buildSolver();
         completableSolverFuture = managedExecutor.runAsync(() -> {
@@ -86,7 +85,6 @@ public class SolverService {
                     // TODO: this is race condition with PFC incoming. => we should lock it
                     // TODO: meanwhile, more PFC might have been added; if the solver is restarted before we have new best solution, we loose them.
                     waitingProblemFactChanges.clear();
-                    System.out.println("best solution produced. Score (" + event.getNewBestScore() + ")");
                     pinCallAssignedToAgents(event.getNewBestSolution().getCalls());
                     bestSolutionChangedEventConsumer.accept(event);
                 }
@@ -101,10 +99,6 @@ public class SolverService {
         });
 
         if (!waitingProblemFactChanges.isEmpty()) {
-            System.out.println("Adding (" + waitingProblemFactChanges.size() + ") waiting changes.");
-            waitingProblemFactChanges.forEach(callCenterProblemFactChange -> {
-                System.out.println(callCenterProblemFactChange);
-            });
             solver.addProblemFactChanges(new ArrayList<>(waitingProblemFactChanges));
         }
         solving.set(true);
@@ -131,17 +125,14 @@ public class SolverService {
     }
 
     public void addCall(Call call) {
-     //   System.out.println("Call added (" + call.getId() + ").");
         registerProblemFactChange(new AddCallProblemFactChange(call));
     }
 
     public void removeCall(long callId) {
-      //  System.out.println("Call removed (" + callId + ").");
         registerProblemFactChange(new RemoveCallProblemFactChange(callId));
     }
 
     public void prolongCall(long callId) {
-      //  System.out.println("Call prolonged");
         registerProblemFactChange(new ProlongCallByMinuteProblemFactChange(callId));
     }
 
@@ -154,7 +145,6 @@ public class SolverService {
         if (isSolving()) {
             assertSolverIsAlive();
             solver.addProblemFactChange(problemFactChange);
-            System.out.println(problemFactChange);
         }
     }
 

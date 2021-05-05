@@ -16,6 +16,9 @@
 
 package org.acme.callcenter.messaging;
 
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
@@ -41,38 +44,58 @@ public class CallCenterMessageHandler {
     @Channel("best_solution")
     Emitter<BestSolutionEvent> bestSolutionEmitter;
 
+    private AtomicLong problemId = new AtomicLong(-1);
+
     @Incoming("add_agent")
     public void handleAddAgent(AddAgentEvent addAgentEvent) {
-        solverService.addAgent(addAgentEvent.getAgent());
+        long eventProblemId = Objects.requireNonNull(addAgentEvent).getProblemId();
+        if (problemId.get() == eventProblemId) {
+            solverService.addAgent(addAgentEvent.getAgent());
+        }
     }
 
     @Incoming("add_call")
     public void handleAddCall(AddCallEvent addCallEvent) {
-        solverService.addCall(addCallEvent.getCall());
+        long eventProblemId = Objects.requireNonNull(addCallEvent).getProblemId();
+        if (problemId.get() == eventProblemId) {
+            solverService.addCall(addCallEvent.getCall());
+        }
     }
 
     @Incoming("remove_call")
     public void handleRemoveCall(RemoveCallEvent removeCallEvent) {
-        solverService.removeCall(removeCallEvent.getCallId());
+        long eventProblemId = Objects.requireNonNull(removeCallEvent).getProblemId();
+        if (problemId.get() == eventProblemId) {
+            solverService.removeCall(removeCallEvent.getCallId());
+        }
     }
 
     @Incoming("prolong_call")
     public void handleProlongCall(ProlongCallEvent prolongCallEvent) {
-        solverService.prolongCall(prolongCallEvent.getCallId());
+        long eventProblemId = Objects.requireNonNull(prolongCallEvent).getProblemId();
+        if (problemId.get() == eventProblemId) {
+            solverService.prolongCall(prolongCallEvent.getCallId());
+        }
     }
 
     @Incoming("start_solver")
     public void handleStartSolver(StartSolverEvent startSolverEvent) {
-        solverService.startSolving(startSolverEvent.getInputProblem(),
-                bestSolutionChangedEvent -> {
-                    bestSolutionEmitter.send(new BestSolutionEvent(startSolverEvent.getProblemId(),
-                            bestSolutionChangedEvent.getNewBestSolution()));
-                }, throwable -> throwable.printStackTrace());
+        long eventProblemId = Objects.requireNonNull(startSolverEvent).getProblemId();
+        if (problemId.compareAndSet(-1, eventProblemId)) { // Only if this pod is not yet solving.
+            solverService.startSolving(startSolverEvent.getInputProblem(),
+                    bestSolutionChangedEvent -> {
+                        bestSolutionEmitter.send(new BestSolutionEvent(startSolverEvent.getProblemId(),
+                                bestSolutionChangedEvent.getNewBestSolution()));
+                    }, throwable -> throwable.printStackTrace());
+        }
     }
 
     @Incoming("stop_solver")
     public void handleSolverCommand(StopSolverEvent stopSolverEvent) {
-        solverService.stopSolving();
+        long eventProblemId = Objects.requireNonNull(stopSolverEvent).getProblemId();
+        if (problemId.compareAndSet(eventProblemId, -1)) {
+            solverService.stopSolving();
+        }
     }
 
 }

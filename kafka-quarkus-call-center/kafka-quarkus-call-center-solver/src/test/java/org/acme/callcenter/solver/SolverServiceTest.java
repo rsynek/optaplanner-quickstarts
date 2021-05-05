@@ -89,7 +89,6 @@ public class SolverServiceTest {
                     Call call = addCalls.take();
                     solverService.addCall(call);
                     removeCalls.put(call);
-                 //   System.out.println("Adding a call by thread (" + Thread.currentThread().getName() + ":" + Thread.currentThread().getId() + ")");
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -103,7 +102,6 @@ public class SolverServiceTest {
                 try {
                     Call call = removeCalls.take();
                     solverService.removeCall(call.getId());
-               //     System.out.println("Removing a call by thread (" + Thread.currentThread().getName() + ":" + Thread.currentThread().getId() + ")");
                     Thread.sleep(100);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -139,10 +137,8 @@ public class SolverServiceTest {
 
         executorService.submit(() -> {
             for (int i = 0; i < 10; i++) {
-             //   System.out.println("Adding an extra call.");
                 solverService.addCall(dataGenerator.generateCall(100));
             }
-            //restartSolving(addCount, removeCount, allChangesProcessed);
         });
 
         allChangesProcessed.await();
@@ -153,15 +149,11 @@ public class SolverServiceTest {
     }
 
     private void restartSolving(AtomicInteger addCount, AtomicInteger removeCount, CountDownLatch allChangesProcessed) {
-      //  System.out.println("================================================  RESTART SOLVING ================================================");
-
         if (solverService.isSolving()) {
             solverService.stopSolving();
         }
         solverService.startSolving(bestSolution.get(), (bestSolutionChangedEvent) -> {
             if (bestSolutionChangedEvent.isEveryProblemFactChangeProcessed()) {
-             //   System.out.println("New best solution changed event. Calls (" + bestSolutionChangedEvent.getNewBestSolution().getCalls().size() + ")");
-             //   System.out.println("addCount (" + addCount.get() + "), removeCount (" + removeCount.get() + ")");
                 bestSolution.set(bestSolutionChangedEvent.getNewBestSolution());
                 if (addCount.get() <= 0 && removeCount.get() <= 0) {
                     allChangesProcessed.countDown();
