@@ -17,13 +17,14 @@
 package org.acme.callcenter.service;
 
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.message.AddCallEvent;
@@ -41,7 +42,9 @@ public class SolverService {
 
     private static final Duration CALL_PROLONGATION_DURATION = Duration.ofMinutes(1L);
 
-    private final Map<Long, Consumer<CallCenter>> bestSolutionConsumers = new ConcurrentHashMap<>();
+    private Consumer<CallCenter> bestSolutionConsumer;
+
+    private AtomicBoolean solving = new AtomicBoolean(false);
 
     @Inject
     @Channel("start_solver")
@@ -65,35 +68,30 @@ public class SolverService {
 
     @Incoming("best_solution")
     public void handleBestSolutionEvent(BestSolutionEvent bestSolutionEvent) {
-        if (bestSolutionEvent == null) {
-            System.out.println("Null bestSolutionEvent");
-            return;
-        }
-//        Objects.requireNonNull(bestSolutionEvent);
-        // TODO: what if there is no consumer?
-        Consumer<CallCenter> bestSolutionConsumer = bestSolutionConsumers.get(bestSolutionEvent.getProblemId());
-        if (bestSolutionConsumer == null) {
-            System.out.println("No best solution consumer found for problem ID (" + bestSolutionEvent.getProblemId() + ")");
-            //throw new IllegalStateException("No best solution consumer found for problem ID (" + bestSolutionEvent.getProblemId() + ")");
-        } else {
-            bestSolutionConsumer.accept(bestSolutionEvent.getBestSolution());
+        BestSolutionEvent nonNullBestSolutionEvent = Objects.requireNonNull(bestSolutionEvent);
+        if (DataGenerator.PROBLEM_ID == nonNullBestSolutionEvent.getProblemId() && isSolving()) {
+            if (bestSolutionConsumer == null) {
+                throw new IllegalStateException("Impossible state: no best solution should be accepted before starting the solver.");
+            }
+            bestSolutionConsumer.accept(nonNullBestSolutionEvent.getBestSolution());
         }
     }
 
     public void startSolving(long problemId, CallCenter inputProblem, Consumer<CallCenter> bestSolutionConsumer) {
-        bestSolutionConsumers.put(problemId, bestSolutionConsumer);
+        solving.set(true);
+        this.bestSolutionConsumer = bestSolutionConsumer;
         StartSolverEvent startSolverEvent = new StartSolverEvent(problemId, inputProblem);
         startSolverEventEmitter.send(startSolverEvent);
     }
 
     public void stopSolving(long problemId) {
-        bestSolutionConsumers.remove(problemId);
+        solving.set(false);
+        bestSolutionConsumer = null;
         StopSolverEvent stopSolverEvent = new StopSolverEvent(problemId);
         stopSolverEventEmitter.send(stopSolverEvent);
     }
 
     public void addCall(long problemId, Call call) {
-        System.out.println("Automatically creating a call: " + call.getId());
         AddCallEvent addCallEvent = new AddCallEvent(problemId, call);
         addCallEventEmitter.send(addCallEvent);
     }
@@ -106,5 +104,9 @@ public class SolverService {
     public void prolongCall(long problemId, long callId) {
         ProlongCallEvent prolongCallEvent = new ProlongCallEvent(problemId, callId, CALL_PROLONGATION_DURATION);
         prolongCallEventEmitter.send(prolongCallEvent);
+    }
+
+    public boolean isSolving() {
+        return solving.get();
     }
 }

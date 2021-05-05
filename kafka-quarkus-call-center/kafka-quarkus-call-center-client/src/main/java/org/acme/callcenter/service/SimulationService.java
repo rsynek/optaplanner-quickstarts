@@ -61,7 +61,6 @@ public class SimulationService {
     private ScheduledFuture<?> scheduleCallEnd(Call call, long delay, TimeUnit timeUnit) {
         return scheduledExecutorService.schedule(() -> {
             callsInProgress.computeIfPresent(call.getId(), (callId, callInProgress) -> {
-                System.out.println("Automatically removing a call: " + callId);
                 solverService.removeCall(DataGenerator.PROBLEM_ID, callId);
                 return null;
             });
@@ -128,9 +127,6 @@ public class SimulationService {
         });
     }
 
-    /**
-     * Not thread-safe. The method is called from the Solver thread.
-     */
     public void onNewBestSolution(CallCenter newBestSolution) {
         newBestSolution.getCalls().forEach(call -> {
             if (call.isPinned()) {

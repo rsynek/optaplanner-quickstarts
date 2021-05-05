@@ -16,7 +16,6 @@
 
 package org.acme.callcenter.rest;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.inject.Inject;
@@ -38,9 +37,6 @@ public class CallCenterResource {
     private AtomicReference<CallCenter> bestSolution = new AtomicReference<>();
     private AtomicReference<Throwable> solvingError = new AtomicReference<>();
 
-    // TODO: sync-up with the solver server
-    private AtomicBoolean solving = new AtomicBoolean(false);
-
     @Inject
     SolverService solverService;
 
@@ -59,7 +55,7 @@ public class CallCenterResource {
             throw new IllegalStateException("Exception occurred during solving.", solvingError.get());
         }
         CallCenter callCenter = bestSolution.get();
-        callCenter.setSolving(solving.get());
+        callCenter.setSolving(solverService.isSolving());
         return PortableCallCenter.fromCallCenter(callCenter);
     }
 
@@ -71,7 +67,6 @@ public class CallCenterResource {
             simulationService.onNewBestSolution(callCenter);
         });
         simulationService.startSimulation();
-        solving.set(true);
     }
 
     @POST
@@ -79,6 +74,5 @@ public class CallCenterResource {
     public void stop() {
         solverService.stopSolving(DataGenerator.PROBLEM_ID);
         simulationService.stopSimulation();
-        solving.set(false);
     }
 }
