@@ -16,6 +16,7 @@
 
 package org.acme.callcenter.data;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -59,12 +60,12 @@ public class DataGenerator {
     }
 
     public CallCenter generateCallCenter() {
-        return new CallCenter(EnumSet.allOf(Skill.class), Arrays.asList(AGENTS), new ArrayList<>());
+        return new CallCenter(Arrays.asList(AGENTS), new ArrayList<>());
     }
 
     public Call generateCall(int durationSeconds) {
         return new Call(nextId(), generatePhoneNumber(), buildSkillSet(pickRandomLanguageSkill(), pickRandomProductSkill()),
-                durationSeconds);
+                Duration.ofSeconds(durationSeconds));
     }
 
     private synchronized Skill pickRandomProductSkill() {

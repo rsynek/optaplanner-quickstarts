@@ -17,85 +17,68 @@
 package org.acme.callcenter.messaging;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicLong;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.acme.callcenter.message.AddAgentEvent;
 import org.acme.callcenter.message.AddCallEvent;
-import org.acme.callcenter.message.BestSolutionEvent;
 import org.acme.callcenter.message.ProlongCallEvent;
 import org.acme.callcenter.message.RemoveCallEvent;
 import org.acme.callcenter.message.StartSolverEvent;
 import org.acme.callcenter.message.StopSolverEvent;
-import org.acme.callcenter.solver.SolverService;
-import org.eclipse.microprofile.reactive.messaging.Channel;
-import org.eclipse.microprofile.reactive.messaging.Emitter;
+import org.acme.callcenter.persistence.ProblemFactChangeRepository;
+import org.acme.callcenter.service.SolverService;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+
+import io.smallrye.common.annotation.Blocking;
 
 @ApplicationScoped
 public class CallCenterMessageHandler {
 
     @Inject
-    SolverService solverService;
+    ProblemFactChangeRepository problemFactChangeRepository;
 
     @Inject
-    @Channel("best_solution")
-    Emitter<BestSolutionEvent> bestSolutionEmitter;
-
-    private AtomicLong problemId = new AtomicLong(-1);
-
-    @Incoming("add_agent")
-    public void handleAddAgent(AddAgentEvent addAgentEvent) {
-        long eventProblemId = Objects.requireNonNull(addAgentEvent).getProblemId();
-        if (problemId.get() == eventProblemId) {
-            solverService.addAgent(addAgentEvent.getAgent());
-        }
-    }
+    SolverService solverService;
 
     @Incoming("add_call")
+    @Blocking
     public void handleAddCall(AddCallEvent addCallEvent) {
         long eventProblemId = Objects.requireNonNull(addCallEvent).getProblemId();
-        if (problemId.get() == eventProblemId) {
-            solverService.addCall(addCallEvent.getCall());
+        if (solverService.isSolvingProblem(eventProblemId)) {
+            solverService.addCall(eventProblemId, addCallEvent.getCall());
         }
     }
 
     @Incoming("remove_call")
+    @Blocking
     public void handleRemoveCall(RemoveCallEvent removeCallEvent) {
         long eventProblemId = Objects.requireNonNull(removeCallEvent).getProblemId();
-        if (problemId.get() == eventProblemId) {
-            solverService.removeCall(removeCallEvent.getCallId());
+        if (solverService.isSolvingProblem(eventProblemId)) {
+            solverService.removeCall(eventProblemId, removeCallEvent.getCallId());
         }
     }
 
     @Incoming("prolong_call")
+    @Blocking
     public void handleProlongCall(ProlongCallEvent prolongCallEvent) {
         long eventProblemId = Objects.requireNonNull(prolongCallEvent).getProblemId();
-        if (problemId.get() == eventProblemId) {
-            solverService.prolongCall(prolongCallEvent.getCallId());
+        if (solverService.isSolvingProblem(eventProblemId)) {
+            solverService.prolongCall(eventProblemId, prolongCallEvent.getCallId(), prolongCallEvent.getProlongation());
         }
     }
 
     @Incoming("start_solver")
+    @Blocking
     public void handleStartSolver(StartSolverEvent startSolverEvent) {
         long eventProblemId = Objects.requireNonNull(startSolverEvent).getProblemId();
-        if (problemId.compareAndSet(-1, eventProblemId)) { // Only if this pod is not yet solving.
-            solverService.startSolving(startSolverEvent.getInputProblem(),
-                    bestSolutionChangedEvent -> {
-                        bestSolutionEmitter.send(new BestSolutionEvent(startSolverEvent.getProblemId(),
-                                bestSolutionChangedEvent.getNewBestSolution()));
-                    }, throwable -> throwable.printStackTrace());
-        }
+        solverService.startSolving(eventProblemId);
     }
 
     @Incoming("stop_solver")
-    public void handleSolverCommand(StopSolverEvent stopSolverEvent) {
+    @Blocking
+    public void handleStopSolver(StopSolverEvent stopSolverEvent) {
         long eventProblemId = Objects.requireNonNull(stopSolverEvent).getProblemId();
-        if (problemId.compareAndSet(eventProblemId, -1)) {
-            solverService.stopSolving();
-        }
+        solverService.stopSolving(eventProblemId);
     }
-
 }

@@ -41,7 +41,7 @@ public class SimulationService {
     private static final int MAX_FREQUENCY_PER_MINUTE = 60;
 
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-    private final SolverService solverService;
+    private final SolverMessageHandler solverMessageHandler;
     private final DataGenerator dataGenerator;
     private final ConcurrentMap<Long, CallInProgress> callsInProgress = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -53,15 +53,15 @@ public class SimulationService {
     private ScheduledFuture<?> addNewCallScheduledFuture;
 
     @Inject
-    public SimulationService(SolverService solverService, DataGenerator dataGenerator) {
-        this.solverService = solverService;
+    public SimulationService(SolverMessageHandler solverMessageHandler, DataGenerator dataGenerator) {
+        this.solverMessageHandler = solverMessageHandler;
         this.dataGenerator = dataGenerator;
     }
 
     private ScheduledFuture<?> scheduleCallEnd(Call call, long delay, TimeUnit timeUnit) {
         return scheduledExecutorService.schedule(() -> {
             callsInProgress.computeIfPresent(call.getId(), (callId, callInProgress) -> {
-                solverService.removeCall(DataGenerator.PROBLEM_ID, callId);
+                solverMessageHandler.removeCall(DataGenerator.PROBLEM_ID, callId);
                 return null;
             });
         }, delay, timeUnit);
@@ -102,7 +102,7 @@ public class SimulationService {
         int delayInSeconds = 60 / frequency;
 
         addNewCallScheduledFuture = scheduledExecutorService.scheduleAtFixedRate(
-                () -> solverService.addCall(DataGenerator.PROBLEM_ID, dataGenerator.generateCall(duration)), 0, delayInSeconds,
+                () -> solverMessageHandler.addCall(DataGenerator.PROBLEM_ID, dataGenerator.generateCall(duration)), 0, delayInSeconds,
                 TimeUnit.SECONDS);
     }
 

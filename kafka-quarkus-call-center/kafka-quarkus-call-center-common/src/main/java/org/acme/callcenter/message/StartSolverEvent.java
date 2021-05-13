@@ -16,11 +16,7 @@
 
 package org.acme.callcenter.message;
 
-import org.acme.callcenter.domain.CallCenter;
-
 public class StartSolverEvent extends AbstractSolverEvent{
-
-    private CallCenter inputProblem;
 
     public StartSolverEvent() {
         // Required by Jackson.
@@ -28,14 +24,5 @@ public class StartSolverEvent extends AbstractSolverEvent{
 
     public StartSolverEvent(long problemId) {
         super(problemId);
-    }
-
-    public StartSolverEvent(long problemId, CallCenter inputProblem) {
-        super(problemId);
-        this.inputProblem = inputProblem;
-    }
-
-    public CallCenter getInputProblem() {
-        return inputProblem;
     }
 }

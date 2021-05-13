@@ -16,6 +16,9 @@
 
 package org.acme.callcenter.domain;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
@@ -29,8 +32,7 @@ import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 @PlanningSolution
 public class CallCenter {
 
-    @ProblemFactCollectionProperty
-    private Set<Skill> skills;
+    private Long lastChangeId;
 
     @ProblemFactCollectionProperty
     @ValueRangeProvider(id = "agentRange")
@@ -43,20 +45,18 @@ public class CallCenter {
     @PlanningScore
     private HardSoftScore score;
 
-    private boolean solving;
-
     public CallCenter() {
         // Required by OptaPlanner.
     }
 
-    public CallCenter(Set<Skill> skills, List<Agent> agents, List<Call> calls) {
-        this.skills = skills;
-        this.agents = agents;
-        this.calls = calls;
+    public CallCenter(Collection<Agent> agents, Collection<Call> calls) {
+        this.agents = new ArrayList<>(agents);
+        this.calls = new ArrayList<>(calls);
     }
 
+    @ProblemFactCollectionProperty
     public Set<Skill> getSkills() {
-        return skills;
+        return EnumSet.allOf(Skill.class);
     }
 
     public List<Agent> getAgents() {
@@ -75,11 +75,11 @@ public class CallCenter {
         this.score = score;
     }
 
-    public boolean isSolving() {
-        return solving;
+    public Long getLastChangeId() {
+        return lastChangeId;
     }
 
-    public void setSolving(boolean solving) {
-        this.solving = solving;
+    public void setLastChangeId(long lastChangeId) {
+        this.lastChangeId = lastChangeId;
     }
 }

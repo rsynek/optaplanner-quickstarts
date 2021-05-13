@@ -17,6 +17,7 @@
 package org.acme.callcenter.solver;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -33,11 +34,6 @@ import javax.inject.Inject;
 import org.acme.callcenter.domain.Agent;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
-import org.acme.callcenter.solver.change.AddAgentProblemFactChange;
-import org.acme.callcenter.solver.change.AddCallProblemFactChange;
-import org.acme.callcenter.solver.change.PinCallProblemFactChange;
-import org.acme.callcenter.solver.change.ProlongCallByMinuteProblemFactChange;
-import org.acme.callcenter.solver.change.RemoveCallProblemFactChange;
 import org.eclipse.microprofile.context.ManagedExecutor;
 import org.optaplanner.core.api.solver.ProblemFactChange;
 import org.optaplanner.core.api.solver.Solver;
@@ -45,7 +41,7 @@ import org.optaplanner.core.api.solver.SolverFactory;
 import org.optaplanner.core.api.solver.event.BestSolutionChangedEvent;
 
 @ApplicationScoped
-public class SolverService {
+public class SolverManager {
 
     private final ManagedExecutor managedExecutor;
 
@@ -55,26 +51,27 @@ public class SolverService {
 
     private AtomicBoolean solving = new AtomicBoolean(false);
     private CompletableFuture<?> completableSolverFuture;
+    // TODO: Might not be needed anymore thanks to persistence.
     private final BlockingQueue<ProblemFactChange<CallCenter>> waitingProblemFactChanges = new LinkedBlockingQueue<>();
 
     @Inject
-    public SolverService(SolverFactory<CallCenter> solverFactory, @Default ManagedExecutor executorService) {
+    public SolverManager(SolverFactory<CallCenter> solverFactory, @Default ManagedExecutor executorService) {
         this.solverFactory = solverFactory;
         this.managedExecutor = executorService;
     }
 
-    private void pinCallAssignedToAgents(List<Call> calls) {
+    private void pinCallAssignedToAgents(Collection<Call> calls) {
         List<ProblemFactChange<CallCenter>> pinCallProblemFactChanges = calls.stream()
                 .filter(call -> !call.isPinned()
                         && call.getPreviousCallOrAgent() != null
                         && call.getPreviousCallOrAgent() instanceof Agent)
-                .map(PinCallProblemFactChange::new)
+                .map(call1 -> new PinCallProblemFactChange(call1))
                 .collect(Collectors.toList());
         solver.addProblemFactChanges(pinCallProblemFactChanges);
     }
 
     public synchronized void startSolving(CallCenter inputProblem,
-            Consumer<BestSolutionChangedEvent<CallCenter>> bestSolutionChangedEventConsumer, Consumer<Throwable> errorHandler) {
+                                          Consumer<BestSolutionChangedEvent<CallCenter>> bestSolutionChangedEventConsumer, Consumer<Throwable> errorHandler) {
         if (isSolving()) {
             throw new IllegalStateException("The solver has been already running.");
         }
@@ -82,8 +79,6 @@ public class SolverService {
         completableSolverFuture = managedExecutor.runAsync(() -> {
             solver.addEventListener(event -> {
                 if (event.isEveryProblemFactChangeProcessed() && event.getNewBestScore().isSolutionInitialized()) {
-                    // TODO: this is race condition with PFC incoming. => we should lock it
-                    // TODO: meanwhile, more PFC might have been added; if the solver is restarted before we have new best solution, we loose them.
                     waitingProblemFactChanges.clear();
                     pinCallAssignedToAgents(event.getNewBestSolution().getCalls());
                     bestSolutionChangedEventConsumer.accept(event);
@@ -93,7 +88,8 @@ public class SolverService {
             try {
                 solver.solve(inputProblem);
             } catch (Throwable throwable) {
-                throwable.printStackTrace();
+                solving.set(false);
+                completableSolverFuture.completeExceptionally(throwable);
                 errorHandler.accept(throwable);
             }
         });
@@ -124,27 +120,19 @@ public class SolverService {
         return solving.get();
     }
 
-    public void addCall(Call call) {
-        registerProblemFactChange(new AddCallProblemFactChange(call));
-    }
-
-    public void removeCall(long callId) {
-        registerProblemFactChange(new RemoveCallProblemFactChange(callId));
-    }
-
-    public void prolongCall(long callId) {
-        registerProblemFactChange(new ProlongCallByMinuteProblemFactChange(callId));
-    }
-
-    public void addAgent(Agent agent) {
-        registerProblemFactChange(new AddAgentProblemFactChange(agent));
-    }
-
-    private synchronized void registerProblemFactChange(ProblemFactChange<CallCenter> problemFactChange) {
+    public synchronized void registerProblemFactChange(ProblemFactChange<CallCenter> problemFactChange) {
         waitingProblemFactChanges.add(problemFactChange);
         if (isSolving()) {
             assertSolverIsAlive();
             solver.addProblemFactChange(problemFactChange);
+        }
+    }
+
+    public synchronized void registerProblemFactChanges(List<ProblemFactChange<CallCenter>> problemFactChanges) {
+        waitingProblemFactChanges.addAll(problemFactChanges);
+        if (isSolving()) {
+            assertSolverIsAlive();
+            solver.addProblemFactChanges(problemFactChanges);
         }
     }
 

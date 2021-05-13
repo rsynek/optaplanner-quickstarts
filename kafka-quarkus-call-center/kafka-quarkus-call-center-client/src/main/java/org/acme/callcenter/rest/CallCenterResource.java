@@ -16,8 +16,11 @@
 
 package org.acme.callcenter.rest;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -27,9 +30,13 @@ import javax.ws.rs.core.MediaType;
 
 import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.domain.CallCenter;
-import org.acme.callcenter.portable.PortableCallCenter;
+import org.acme.callcenter.persistence.CallCenterRepository;
+import org.acme.callcenter.rest.dto.AgentDto;
+import org.acme.callcenter.rest.dto.CallCenterDto;
 import org.acme.callcenter.service.SimulationService;
-import org.acme.callcenter.service.SolverService;
+import org.acme.callcenter.service.SolverMessageHandler;
+
+import io.quarkus.runtime.StartupEvent;
 
 @Path("/call-center")
 public class CallCenterResource {
@@ -38,31 +45,43 @@ public class CallCenterResource {
     private AtomicReference<Throwable> solvingError = new AtomicReference<>();
 
     @Inject
-    SolverService solverService;
+    SolverMessageHandler solverMessageHandler;
 
     @Inject
     SimulationService simulationService;
 
     @Inject
-    CallCenterResource(DataGenerator dataGenerator) {
-        bestSolution.set(dataGenerator.generateCallCenter());
+    CallCenterRepository callCenterRepository;
+
+    @Inject
+    DataGenerator dataGenerator;
+
+    public void setupDemoData(@Observes StartupEvent startupEvent) {
+        CallCenter callCenter = dataGenerator.generateCallCenter();
+        callCenterRepository.save(DataGenerator.PROBLEM_ID, callCenter);
+        bestSolution.set(callCenter);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public PortableCallCenter get() {
+    public CallCenterDto get() {
         if (solvingError.get() != null) {
             throw new IllegalStateException("Exception occurred during solving.", solvingError.get());
         }
-        CallCenter callCenter = bestSolution.get();
-        callCenter.setSolving(solverService.isSolving());
-        return PortableCallCenter.fromCallCenter(callCenter);
+        CallCenterDto callCenterDto = convert(bestSolution.get());
+        callCenterDto.setSolving(solverMessageHandler.isSolving());
+        return callCenterDto;
+    }
+
+    private CallCenterDto convert(CallCenter callCenter) {
+        List<AgentDto> agents = callCenter.getAgents().stream().map(AgentDto::fromAgent).collect(Collectors.toList());
+        return new CallCenterDto(agents, callCenter.getScore());
     }
 
     @POST
     @Path("solve")
     public void solve() {
-        solverService.startSolving(DataGenerator.PROBLEM_ID, bestSolution.get(), callCenter -> {
+        solverMessageHandler.startSolving(DataGenerator.PROBLEM_ID, callCenter -> {
             bestSolution.set(callCenter);
             simulationService.onNewBestSolution(callCenter);
         });
@@ -72,7 +91,7 @@ public class CallCenterResource {
     @POST
     @Path("stop")
     public void stop() {
-        solverService.stopSolving(DataGenerator.PROBLEM_ID);
+        solverMessageHandler.stopSolving(DataGenerator.PROBLEM_ID);
         simulationService.stopSimulation();
     }
 }

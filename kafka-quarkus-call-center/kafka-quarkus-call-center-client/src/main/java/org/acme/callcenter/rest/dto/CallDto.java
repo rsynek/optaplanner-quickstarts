@@ -14,36 +14,42 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.portable;
+package org.acme.callcenter.rest.dto;
 
 import java.time.Duration;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.Skill;
 
-public class PortableCall {
+public class CallDto {
 
-    public static PortableCall fromCall(Call call) {
-        return new PortableCall(call.getId(), call.getPhoneNumber(), call.getRequiredSkills(), call.getDuration(),
+    public static CallDto fromCall(Call call) {
+        return new CallDto(call.getId(), call.getPhoneNumber(), call.getRequiredSkills(), call.getDuration(),
                 call.getStartTime(), call.getPickUpTime(), call.isPinned(), call.getEstimatedWaiting());
     }
 
     private long id;
     private String phoneNumber;
-    private Set<Skill> requiredSkills;
-    private Duration duration;
+    private List<Skill> requiredSkills;
+    private Duration duration = Duration.ZERO;
     private LocalTime startTime;
     private LocalTime pickUpTime;
     private boolean pinned;
     private Duration estimatedWaiting;
 
-    public PortableCall(long id, String phoneNumber, Set<Skill> requiredSkills, Duration duration, LocalTime startTime,
+    public CallDto() {
+        // Required by Jackson.
+    }
+
+    public CallDto(long id, String phoneNumber, Set<Skill> requiredSkills, Duration duration, LocalTime startTime,
             LocalTime pickUpTime, boolean pinned, Duration estimatedWaiting) {
         this.id = id;
         this.phoneNumber = phoneNumber;
-        this.requiredSkills = requiredSkills;
+        this.requiredSkills = new ArrayList<>(requiredSkills);
         this.duration = duration;
         this.startTime = startTime;
         this.pickUpTime = pickUpTime;
@@ -59,7 +65,7 @@ public class PortableCall {
         return phoneNumber;
     }
 
-    public Set<Skill> getRequiredSkills() {
+    public List<Skill> getRequiredSkills() {
         return requiredSkills;
     }
 
@@ -82,5 +88,4 @@ public class PortableCall {
     public Duration getEstimatedWaiting() {
         return estimatedWaiting;
     }
-
 }

@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.persistence;
+package org.acme.callcenter.service;
 
-public class AgentRepository {
+import io.quarkus.test.junit.QuarkusTest;
+
+@QuarkusTest
+public class SolverMessageHandlerTest {
+
 }

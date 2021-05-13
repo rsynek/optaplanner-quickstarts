@@ -14,28 +14,44 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.solver.change;
+package org.acme.callcenter.change;
+
+import javax.persistence.Convert;
+import javax.persistence.Entity;
 
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
+import org.acme.callcenter.persistence.JsonCallConverter;
 import org.optaplanner.core.api.score.director.ScoreDirector;
-import org.optaplanner.core.api.solver.ProblemFactChange;
 
-public class AddCallProblemFactChange implements ProblemFactChange<CallCenter> {
+@Entity
+public class AddCallProblemFactChange extends PersistableProblemFactChange {
 
-    private final Call call;
+    @Convert(converter = JsonCallConverter.class)
+    private Call call;
 
-    public AddCallProblemFactChange(Call call) {
+    AddCallProblemFactChange() {
+        // Required by JPA.
+    }
+
+    public AddCallProblemFactChange(long problemId, Call call) {
+        super(problemId);
         this.call = call;
     }
 
     @Override
     public void doChange(ScoreDirector<CallCenter> scoreDirector) {
         CallCenter callCenter = scoreDirector.getWorkingSolution();
+        callCenter.setLastChangeId(getId());
+
         scoreDirector.beforeEntityAdded(call);
         callCenter.getCalls().add(call);
         scoreDirector.afterEntityAdded(call);
         scoreDirector.triggerVariableListeners();
+    }
+
+    public Call getCall() {
+        return call;
     }
 
     @Override

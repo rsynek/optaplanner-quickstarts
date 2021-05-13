@@ -1,0 +1,63 @@
+/*
+ * Copyright 2021 Red Hat, Inc. and/or its affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.acme.callcenter.persistence;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+
+@Entity
+public class CallCenterRecord {
+
+    @Id
+    private long problemId;
+
+    @Lob
+    private String callCenterJson;
+
+    @Column
+    private boolean active = false;
+
+    public CallCenterRecord() {
+    }
+
+    public CallCenterRecord(long problemId, String callCenterJson) {
+        this.problemId = problemId;
+        this.callCenterJson = callCenterJson;
+    }
+
+    public long getProblemId() {
+        return problemId;
+    }
+
+    public String getCallCenterJson() {
+        return callCenterJson;
+    }
+
+    public void setCallCenterJson(String callCenterJson) {
+        this.callCenterJson = callCenterJson;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+}

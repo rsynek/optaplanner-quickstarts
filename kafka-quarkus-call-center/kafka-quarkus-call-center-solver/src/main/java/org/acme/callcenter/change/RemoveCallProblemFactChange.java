@@ -14,25 +14,36 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.solver.change;
+package org.acme.callcenter.change;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
 
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.domain.PreviousCallOrAgent;
 import org.optaplanner.core.api.score.director.ScoreDirector;
-import org.optaplanner.core.api.solver.ProblemFactChange;
 
-public class RemoveCallProblemFactChange implements ProblemFactChange<CallCenter> {
+@Entity
+public class RemoveCallProblemFactChange extends PersistableProblemFactChange {
 
-    private final long callId;
+    @Column
+    private long callId;
 
-    public RemoveCallProblemFactChange(long callId) {
+    RemoveCallProblemFactChange() {
+        // Required by JPA.
+    }
+
+    public RemoveCallProblemFactChange(long problemId, long callId) {
+        super(problemId);
         this.callId = callId;
     }
 
     @Override
     public void doChange(ScoreDirector<CallCenter> scoreDirector) {
         CallCenter callCenter = scoreDirector.getWorkingSolution();
+        callCenter.setLastChangeId(getId());
+
         Call call = new Call(callId, null);
         Call workingCall = scoreDirector.lookUpWorkingObjectOrReturnNull(call);
         if (workingCall == null) {
@@ -48,13 +59,7 @@ public class RemoveCallProblemFactChange implements ProblemFactChange<CallCenter
             nextCall.setPreviousCallOrAgent(previousCallOrAgent);
             scoreDirector.afterVariableChanged(nextCall, "previousCallOrAgent");
         }
-/*
-        if (previousCallOrAgent != null) {
-            scoreDirector.beforeVariableChanged(previousCallOrAgent, "nextCall");
-            previousCallOrAgent.setNextCall(nextCall);
-            scoreDirector.afterVariableChanged(previousCallOrAgent, "nextCall");
-        }
-*/
+
         scoreDirector.beforeEntityRemoved(workingCall);
         if (!callCenter.getCalls().remove(workingCall)) {
             throw new IllegalStateException("Working solution does not contains the call (" + callId + ").");

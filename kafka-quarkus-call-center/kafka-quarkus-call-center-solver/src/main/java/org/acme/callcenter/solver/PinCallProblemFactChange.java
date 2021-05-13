@@ -14,27 +14,32 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.solver.change;
+package org.acme.callcenter.solver;
 
-import org.acme.callcenter.domain.Agent;
+import java.time.LocalTime;
+
+import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.optaplanner.core.api.score.director.ScoreDirector;
 import org.optaplanner.core.api.solver.ProblemFactChange;
 
-public class AddAgentProblemFactChange implements ProblemFactChange<CallCenter> {
+public class PinCallProblemFactChange implements ProblemFactChange<CallCenter> {
 
-    private final Agent agent;
+    private final Call call;
 
-    public AddAgentProblemFactChange(Agent agent) {
-        this.agent = agent;
+    public PinCallProblemFactChange(Call call) {
+        this.call = call;
     }
 
     @Override
     public void doChange(ScoreDirector<CallCenter> scoreDirector) {
-        CallCenter callCenter = scoreDirector.getWorkingSolution();
-        scoreDirector.beforeEntityAdded(agent);
-        callCenter.getAgents().add(agent);
-        scoreDirector.afterEntityAdded(agent);
-        scoreDirector.triggerVariableListeners();
+        Call workingCall = scoreDirector.lookUpWorkingObjectOrReturnNull(call);
+        if (workingCall != null) {
+            scoreDirector.beforeProblemPropertyChanged(workingCall);
+            workingCall.setPinned(true);
+            workingCall.setPickUpTime(LocalTime.now());
+            scoreDirector.afterProblemPropertyChanged(workingCall);
+            scoreDirector.triggerVariableListeners();
+        }
     }
 }

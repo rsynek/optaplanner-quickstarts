@@ -15,19 +15,9 @@
  */
 
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.EnumSet;
-
-import org.acme.callcenter.domain.Agent;
-import org.acme.callcenter.domain.Call;
-import org.acme.callcenter.domain.CallCenter;
-import org.acme.callcenter.domain.Skill;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.optaplanner.persistence.jackson.api.OptaPlannerJacksonModule;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -41,7 +31,7 @@ public class CallCenterMarshallingTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(OptaPlannerJacksonModule.createModule());
     }
-
+/*
     @Test
     void marshallingAndUnmarshalling() throws JsonProcessingException {
         Call call = new Call(1L, "123-456-789");
@@ -61,5 +51,5 @@ public class CallCenterMarshallingTest {
 
         CallCenter unmarshalledCallCenter = objectMapper.readValue(callCenterJson, CallCenter.class);
         System.out.println(unmarshalledCallCenter);
-    }
+    }*/
 }

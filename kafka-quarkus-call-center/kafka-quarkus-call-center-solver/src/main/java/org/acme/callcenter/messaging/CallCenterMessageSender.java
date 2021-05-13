@@ -14,15 +14,23 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.messaging.json;
+package org.acme.callcenter.messaging;
 
-import org.acme.callcenter.message.AddAgentEvent;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 
-import io.quarkus.kafka.client.serialization.ObjectMapperDeserializer;
+import org.acme.callcenter.message.BestSolutionEvent;
+import org.eclipse.microprofile.reactive.messaging.Channel;
+import org.eclipse.microprofile.reactive.messaging.Emitter;
 
-public class AddAgentEventDeserializer extends ObjectMapperDeserializer<AddAgentEvent> {
+@ApplicationScoped
+public class CallCenterMessageSender {
 
-    public AddAgentEventDeserializer() {
-        super(AddAgentEvent.class);
+    @Inject
+    @Channel("best_solution")
+    Emitter<BestSolutionEvent> bestSolutionEmitter;
+
+    public void sendBestSolutionEvent(long problemId) {
+        bestSolutionEmitter.send(new BestSolutionEvent(problemId));
     }
 }

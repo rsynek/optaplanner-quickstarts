@@ -18,6 +18,7 @@ package org.acme.callcenter.service;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -33,18 +34,24 @@ import org.acme.callcenter.message.ProlongCallEvent;
 import org.acme.callcenter.message.RemoveCallEvent;
 import org.acme.callcenter.message.StartSolverEvent;
 import org.acme.callcenter.message.StopSolverEvent;
+import org.acme.callcenter.persistence.CallCenterRepository;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 
+import io.smallrye.common.annotation.Blocking;
+
 @ApplicationScoped
-public class SolverService {
+public class SolverMessageHandler {
 
     private static final Duration CALL_PROLONGATION_DURATION = Duration.ofMinutes(1L);
 
     private Consumer<CallCenter> bestSolutionConsumer;
 
     private AtomicBoolean solving = new AtomicBoolean(false);
+
+    @Inject
+    CallCenterRepository callCenterRepository;
 
     @Inject
     @Channel("start_solver")
@@ -67,20 +74,30 @@ public class SolverService {
     Emitter<ProlongCallEvent> prolongCallEventEmitter;
 
     @Incoming("best_solution")
+    @Blocking
     public void handleBestSolutionEvent(BestSolutionEvent bestSolutionEvent) {
         BestSolutionEvent nonNullBestSolutionEvent = Objects.requireNonNull(bestSolutionEvent);
-        if (DataGenerator.PROBLEM_ID == nonNullBestSolutionEvent.getProblemId() && isSolving()) {
+        long eventProblemId = Objects.requireNonNull(nonNullBestSolutionEvent.getProblemId());
+        if (DataGenerator.PROBLEM_ID == eventProblemId && isSolving()) {
             if (bestSolutionConsumer == null) {
-                throw new IllegalStateException("Impossible state: no best solution should be accepted before starting the solver.");
+                throw new IllegalStateException(
+                        "Impossible state: no best solution should be accepted before starting the solver.");
             }
-            bestSolutionConsumer.accept(nonNullBestSolutionEvent.getBestSolution());
+
+            Optional<CallCenter> callCenter = callCenterRepository.load(eventProblemId);
+            if (callCenter.isEmpty()) {
+                throw new IllegalStateException(
+                        "Cannot find a best solution with the problem ID (" + eventProblemId + ") in the repository.");
+            } else {
+                bestSolutionConsumer.accept(callCenter.get());
+            }
         }
     }
 
-    public void startSolving(long problemId, CallCenter inputProblem, Consumer<CallCenter> bestSolutionConsumer) {
+    public void startSolving(long problemId, Consumer<CallCenter> bestSolutionConsumer) {
         solving.set(true);
         this.bestSolutionConsumer = bestSolutionConsumer;
-        StartSolverEvent startSolverEvent = new StartSolverEvent(problemId, inputProblem);
+        StartSolverEvent startSolverEvent = new StartSolverEvent(problemId);
         startSolverEventEmitter.send(startSolverEvent);
     }
 

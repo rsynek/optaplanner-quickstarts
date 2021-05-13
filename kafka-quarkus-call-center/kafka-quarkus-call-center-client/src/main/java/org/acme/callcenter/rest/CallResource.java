@@ -24,13 +24,13 @@ import javax.ws.rs.PathParam;
 
 import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.service.SimulationService;
-import org.acme.callcenter.service.SolverService;
+import org.acme.callcenter.service.SolverMessageHandler;
 
 @Path("/call")
 public class CallResource {
 
     @Inject
-    SolverService solverService;
+    SolverMessageHandler solverMessageHandler;
 
     @Inject
     SimulationService simulationService;
@@ -38,13 +38,13 @@ public class CallResource {
     @DELETE
     @Path("{id}")
     public void deleteCall(@PathParam("id") long id) {
-        solverService.removeCall(DataGenerator.PROBLEM_ID, id);
+        solverMessageHandler.removeCall(DataGenerator.PROBLEM_ID, id);
     }
 
     @PUT
     @Path("{id}")
     public void prolongCall(@PathParam("id") long id) {
-        solverService.prolongCall(DataGenerator.PROBLEM_ID, id);
+        solverMessageHandler.prolongCall(DataGenerator.PROBLEM_ID, id);
         simulationService.prolongCall(id);
     }
 }

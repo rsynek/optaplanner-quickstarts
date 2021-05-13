@@ -14,34 +14,28 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.portable;
+package org.acme.callcenter.rest.dto;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.acme.callcenter.domain.CallCenter;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 
-public class PortableCallCenter {
+public class CallCenterDto {
 
-    public static PortableCallCenter fromCallCenter(CallCenter callCenter) {
-        List<PortableAgent> portableAgents = callCenter.getAgents().stream()
-                .map(PortableAgent::fromAgent)
-                .collect(Collectors.toList());
-        return new PortableCallCenter(portableAgents, callCenter.getScore(), callCenter.isSolving());
-    }
-
-    private List<PortableAgent> agents;
+    private List<AgentDto> agents;
     private HardSoftScore score;
     private boolean solving;
 
-    public PortableCallCenter(List<PortableAgent> agents, HardSoftScore score, boolean solving) {
-        this.agents = agents;
-        this.score = score;
-        this.solving = solving;
+    public CallCenterDto() {
+        // Required by Jackson.
     }
 
-    public List<PortableAgent> getAgents() {
+    public CallCenterDto(List<AgentDto> agents, HardSoftScore score) {
+        this.agents = agents;
+        this.score = score;
+    }
+
+    public List<AgentDto> getAgents() {
         return agents;
     }
 
@@ -51,5 +45,9 @@ public class PortableCallCenter {
 
     public boolean isSolving() {
         return solving;
+    }
+
+    public void setSolving(boolean solving) {
+        this.solving = solving;
     }
 }

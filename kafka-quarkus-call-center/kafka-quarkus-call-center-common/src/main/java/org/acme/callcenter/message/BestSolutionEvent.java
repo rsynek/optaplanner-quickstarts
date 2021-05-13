@@ -16,22 +16,13 @@
 
 package org.acme.callcenter.message;
 
-import org.acme.callcenter.domain.CallCenter;
-
 public class BestSolutionEvent extends AbstractSolverEvent {
-
-    private CallCenter bestSolution;
 
     public BestSolutionEvent() {
         // Required by Jackson.
     }
 
-    public BestSolutionEvent(long problemId, CallCenter bestSolution) {
+    public BestSolutionEvent(long problemId) {
         super(problemId);
-        this.bestSolution = bestSolution;
-    }
-
-    public CallCenter getBestSolution() {
-        return bestSolution;
     }
 }

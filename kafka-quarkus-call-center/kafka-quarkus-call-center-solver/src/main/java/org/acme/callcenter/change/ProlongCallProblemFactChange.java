@@ -14,30 +14,44 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.solver.change;
+package org.acme.callcenter.change;
 
-import java.time.LocalTime;
+import java.time.Duration;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
 
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.optaplanner.core.api.score.director.ScoreDirector;
-import org.optaplanner.core.api.solver.ProblemFactChange;
 
-public class PinCallProblemFactChange implements ProblemFactChange<CallCenter> {
+@Entity
+public class ProlongCallProblemFactChange extends PersistableProblemFactChange {
 
-    private final Call call;
+    @Column
+    private long callId;
+    @Column
+    private Duration prolongation;
 
-    public PinCallProblemFactChange(Call call) {
-        this.call = call;
+    ProlongCallProblemFactChange() {
+        // Required by JPA.
+    }
+
+    public ProlongCallProblemFactChange(long problemId, long callId, Duration prolongation) {
+        super(problemId);
+        this.callId = callId;
+        this.prolongation = prolongation;
     }
 
     @Override
     public void doChange(ScoreDirector<CallCenter> scoreDirector) {
+        scoreDirector.getWorkingSolution().setLastChangeId(getId());
+        Call call = new Call(callId, null);
         Call workingCall = scoreDirector.lookUpWorkingObjectOrReturnNull(call);
+
         if (workingCall != null) {
             scoreDirector.beforeProblemPropertyChanged(workingCall);
-            workingCall.setPinned(true);
-            workingCall.setPickUpTime(LocalTime.now());
+            workingCall.setDuration(workingCall.getDuration().plus(prolongation));
             scoreDirector.afterProblemPropertyChanged(workingCall);
             scoreDirector.triggerVariableListeners();
         }
