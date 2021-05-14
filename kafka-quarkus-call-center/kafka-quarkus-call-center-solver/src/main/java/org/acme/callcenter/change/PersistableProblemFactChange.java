@@ -17,14 +17,17 @@
 package org.acme.callcenter.change;
 
 import javax.persistence.Column;
+import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 
 import org.acme.callcenter.domain.CallCenter;
 import org.optaplanner.core.api.solver.ProblemFactChange;
 
-@MappedSuperclass
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public abstract class PersistableProblemFactChange implements ProblemFactChange<CallCenter> {
 
     @Id
