@@ -17,9 +17,12 @@
 package org.acme.callcenter.persistence;
 
 import javax.persistence.Column;
+import javax.persistence.Convert;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Lob;
+
+import org.acme.callcenter.domain.CallCenter;
 
 @Entity
 public class CallCenterRecord {
@@ -27,8 +30,9 @@ public class CallCenterRecord {
     @Id
     private long problemId;
 
+    @Convert(converter = JsonCallCenterConverter.class)
     @Lob
-    private String callCenterJson;
+    private CallCenter callCenter;
 
     @Column
     private boolean active = false;
@@ -36,21 +40,21 @@ public class CallCenterRecord {
     public CallCenterRecord() {
     }
 
-    public CallCenterRecord(long problemId, String callCenterJson) {
+    public CallCenterRecord(long problemId, CallCenter callCenter) {
         this.problemId = problemId;
-        this.callCenterJson = callCenterJson;
+        this.callCenter = callCenter;
     }
 
     public long getProblemId() {
         return problemId;
     }
 
-    public String getCallCenterJson() {
-        return callCenterJson;
+    public CallCenter getCallCenter() {
+        return callCenter;
     }
 
-    public void setCallCenterJson(String callCenterJson) {
-        this.callCenterJson = callCenterJson;
+    public void setCallCenter(CallCenter callCenter) {
+        this.callCenter = callCenter;
     }
 
     public boolean isActive() {

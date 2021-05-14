@@ -19,36 +19,27 @@ package org.acme.callcenter.persistence;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import javax.transaction.Transactional;
 
 import org.acme.callcenter.domain.CallCenter;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 
 @ApplicationScoped
 public class CallCenterRepository implements PanacheRepository<CallCenterRecord> {
 
-    @Inject
-    ObjectMapper objectMapper;
-
     @Transactional
     public Optional<CallCenter> load(long problemId) {
-        return findByIdOptional(problemId)
-                .map(callCenterRecord -> fromJson(callCenterRecord.getCallCenterJson(), problemId));
+        return findByIdOptional(problemId).map(CallCenterRecord::getCallCenter);
     }
 
     @Transactional
     public void save(long problemId, CallCenter callCenter) {
         Optional<CallCenterRecord> callCenterRecord = findByIdOptional(problemId);
-        String callCenterJson = toJson(callCenter, problemId);
         if (callCenterRecord.isPresent()) {
-            callCenterRecord.get().setCallCenterJson(callCenterJson);
+            callCenterRecord.get().setCallCenter(callCenter);
         } else {
-            persist(new CallCenterRecord(problemId, callCenterJson));
+            persist(new CallCenterRecord(problemId, callCenter));
         }
     }
 
@@ -65,21 +56,5 @@ public class CallCenterRepository implements PanacheRepository<CallCenterRecord>
             return true;
         }
         return false;
-    }
-
-    private String toJson(CallCenter callCenter, long problemId) {
-        try {
-            return objectMapper.writeValueAsString(callCenter);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Cannot marshall Call Center with problem ID (" + problemId + ") to JSON.", e);
-        }
-    }
-
-    private CallCenter fromJson(String callCenterJson, long problemId) {
-        try {
-            return objectMapper.readValue(callCenterJson, CallCenter.class);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Cannot unmarshall Call Center with problem ID (" + problemId + ") from JSON.", e);
-        }
     }
 }
