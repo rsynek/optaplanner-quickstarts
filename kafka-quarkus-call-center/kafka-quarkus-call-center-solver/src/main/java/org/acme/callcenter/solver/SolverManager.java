@@ -39,9 +39,13 @@ import org.optaplanner.core.api.solver.ProblemFactChange;
 import org.optaplanner.core.api.solver.Solver;
 import org.optaplanner.core.api.solver.SolverFactory;
 import org.optaplanner.core.api.solver.event.BestSolutionChangedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @ApplicationScoped
 public class SolverManager {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolverManager.class);
 
     private final ManagedExecutor managedExecutor;
 
@@ -88,6 +92,7 @@ public class SolverManager {
             try {
                 solver.solve(inputProblem);
             } catch (Throwable throwable) {
+                LOGGER.error("Exception during solving.", throwable);
                 solving.set(false);
                 completableSolverFuture.completeExceptionally(throwable);
                 errorHandler.accept(throwable);

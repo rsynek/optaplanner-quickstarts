@@ -36,12 +36,16 @@ import org.acme.callcenter.messaging.CallCenterMessageSender;
 import org.acme.callcenter.persistence.CallCenterRepository;
 import org.acme.callcenter.persistence.ProblemFactChangeRepository;
 import org.acme.callcenter.solver.SolverManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.quarkus.runtime.StartupEvent;
 
 public class SolverService {
 
     private static final int NOT_SOLVING_PROBLEM_ID = -1;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SolverService.class);
 
     @Inject
     SolverManager solverManager;
@@ -73,6 +77,7 @@ public class SolverService {
 
         // Check if the problemId has been already taken by a different pod.
         if (callCenterRepository.compareAndSetState(problemId, false, true)) {
+            LOGGER.info("Starting solving an input problem (" + problemId + ").");
             currentProblemId.set(problemId);
             CallCenter inputProblem = inputProblemOptional.get();
             solverManager.startSolving(inputProblem,
@@ -90,7 +95,11 @@ public class SolverService {
         if (lastChangeId != null) {
             List<PersistableProblemFactChange> problemFactChanges =
                     problemFactChangeRepository.findByIdGreaterThan(problemId, lastChangeId);
-            solverManager.registerProblemFactChanges(problemFactChanges.stream().collect(Collectors.toList()));
+            if (!problemFactChanges.isEmpty()) {
+                LOGGER.info("Applying problem fact changes to a problem (" + problemId + ") since last change (" + lastChangeId
+                        + ").");
+                solverManager.registerProblemFactChanges(problemFactChanges.stream().collect(Collectors.toList()));
+            }
         }
     }
 
@@ -127,6 +136,7 @@ public class SolverService {
         Optional<Long> activeCallCenterProblemId = callCenterRepository.getFirstActiveId();
         if (activeCallCenterProblemId.isPresent()) {
             long problemId = activeCallCenterProblemId.get();
+            LOGGER.info("Found an active input problem (" + problemId + ") in the repository.");
             // Start solving and apply all the waiting PFCs.
             startSolving(problemId);
         }
@@ -135,7 +145,10 @@ public class SolverService {
     @Transactional
     private void persistBestSolution(long problemId, CallCenter callCenter) {
         callCenterRepository.save(problemId, callCenter);
+        LOGGER.debug("New best solution of a problem (" + problemId + ") persisted.");
         if (callCenter.getLastChangeId() != null) {
+            LOGGER.debug("Removing previous problem fact changes of a problem (" + problemId
+                    + ") from a repository. Last change Id (" + callCenter.getLastChangeId() + ").");
             problemFactChangeRepository.deleteByIdLesserThanOrEqualTo(callCenter.getLastChangeId());
         }
     }
