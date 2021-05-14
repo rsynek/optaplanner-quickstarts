@@ -20,7 +20,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -84,8 +83,8 @@ public class SolverService {
                     bestSolutionChangedEvent -> {
                         persistBestSolution(problemId, bestSolutionChangedEvent.getNewBestSolution());
                         messageSender.sendBestSolutionEvent(problemId);
-                    }, throwable -> { // TODO: send to the client.
-                        throw new CompletionException(throwable);
+                    }, throwable -> { // Send error to the client.
+                        messageSender.sendErrorEvent(problemId, throwable.getClass().getName(), throwable.getMessage());
                     });
             applyWaitingProblemFactChanges(problemId, inputProblem.getLastChangeId());
         }

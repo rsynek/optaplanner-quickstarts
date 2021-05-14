@@ -19,6 +19,7 @@ package org.acme.callcenter.service;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
@@ -30,14 +31,17 @@ import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.message.AddCallEvent;
 import org.acme.callcenter.message.BestSolutionEvent;
+import org.acme.callcenter.message.ErrorEvent;
 import org.acme.callcenter.message.ProlongCallEvent;
 import org.acme.callcenter.message.RemoveCallEvent;
 import org.acme.callcenter.message.StartSolverEvent;
 import org.acme.callcenter.message.StopSolverEvent;
 import org.acme.callcenter.persistence.CallCenterRepository;
+import org.eclipse.microprofile.reactive.messaging.Acknowledgment;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.reactive.messaging.Message;
 
 import io.smallrye.common.annotation.Blocking;
 
@@ -76,8 +80,7 @@ public class SolverMessageHandler {
     @Incoming("best_solution")
     @Blocking
     public void handleBestSolutionEvent(BestSolutionEvent bestSolutionEvent) {
-        BestSolutionEvent nonNullBestSolutionEvent = Objects.requireNonNull(bestSolutionEvent);
-        long eventProblemId = Objects.requireNonNull(nonNullBestSolutionEvent.getProblemId());
+        long eventProblemId = Objects.requireNonNull(bestSolutionEvent.getProblemId());
         if (DataGenerator.PROBLEM_ID == eventProblemId && isSolving()) {
             if (bestSolutionConsumer == null) {
                 throw new IllegalStateException(
@@ -91,6 +94,22 @@ public class SolverMessageHandler {
             } else {
                 bestSolutionConsumer.accept(callCenter.get());
             }
+        }
+    }
+
+    @Incoming("error")
+    @Acknowledgment(Acknowledgment.Strategy.PRE_PROCESSING)
+    public CompletionStage<Void> handleErrorEvent(Message<ErrorEvent> errorEventMessage) {
+        ErrorEvent errorEvent = errorEventMessage.getPayload();
+        long eventProblemId = Objects.requireNonNull(errorEvent.getProblemId());
+        if (DataGenerator.PROBLEM_ID == eventProblemId) { // Error relevant to this client. Fail fast.
+            errorEventMessage.ack();
+            throw new IllegalStateException("Solving failed with exception class ("
+                    + errorEvent.getExceptionClassName()
+                    + ") and message (" + errorEvent.getExceptionMessage() + ").");
+
+        } else { // The message has been read, but does not concern this client.
+            return errorEventMessage.ack();
         }
     }
 

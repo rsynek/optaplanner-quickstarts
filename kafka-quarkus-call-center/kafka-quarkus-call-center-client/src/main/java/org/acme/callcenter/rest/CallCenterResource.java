@@ -42,7 +42,6 @@ import io.quarkus.runtime.StartupEvent;
 public class CallCenterResource {
 
     private AtomicReference<CallCenter> bestSolution = new AtomicReference<>();
-    private AtomicReference<Throwable> solvingError = new AtomicReference<>();
 
     @Inject
     SolverMessageHandler solverMessageHandler;
@@ -65,9 +64,6 @@ public class CallCenterResource {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public CallCenterDto get() {
-        if (solvingError.get() != null) {
-            throw new IllegalStateException("Exception occurred during solving.", solvingError.get());
-        }
         CallCenterDto callCenterDto = convert(bestSolution.get());
         callCenterDto.setSolving(solverMessageHandler.isSolving());
         return callCenterDto;

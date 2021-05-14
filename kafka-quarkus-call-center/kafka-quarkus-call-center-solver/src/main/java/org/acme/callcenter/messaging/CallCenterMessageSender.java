@@ -20,6 +20,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.acme.callcenter.message.BestSolutionEvent;
+import org.acme.callcenter.message.ErrorEvent;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Emitter;
 
@@ -30,7 +31,15 @@ public class CallCenterMessageSender {
     @Channel("best_solution")
     Emitter<BestSolutionEvent> bestSolutionEmitter;
 
+    @Inject
+    @Channel("error")
+    Emitter<ErrorEvent> eventEmitter;
+
     public void sendBestSolutionEvent(long problemId) {
         bestSolutionEmitter.send(new BestSolutionEvent(problemId));
+    }
+
+    public void sendErrorEvent(long problemId, String exceptionClassName, String exceptionMessage) {
+        eventEmitter.send(new ErrorEvent(problemId,exceptionClassName, exceptionMessage));
     }
 }
