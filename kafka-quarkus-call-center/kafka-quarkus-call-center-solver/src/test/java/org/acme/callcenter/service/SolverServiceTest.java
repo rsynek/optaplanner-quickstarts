@@ -31,6 +31,7 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
+import org.acme.callcenter.KafkaTestResourceLifecycleManager;
 import org.acme.callcenter.domain.Agent;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
@@ -41,11 +42,13 @@ import org.acme.callcenter.persistence.ProblemFactChangeRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.mockito.InjectMock;
 
 @QuarkusTest
+@QuarkusTestResource(KafkaTestResourceLifecycleManager.class)
 public class SolverServiceTest {
 
     private static final long PROBLEM_ID = 1L;

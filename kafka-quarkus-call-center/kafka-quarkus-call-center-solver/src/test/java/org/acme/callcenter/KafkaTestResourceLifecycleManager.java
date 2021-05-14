@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.messaging;
+package org.acme.callcenter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +35,7 @@ public class KafkaTestResourceLifecycleManager implements QuarkusTestResourceLif
         Map<String, String> prolongCallChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("prolong_call");
         // outgoing channels
         Map<String, String> bestSolutionChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory("best_solution");
+        Map<String, String> errorChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory("error");
 
         env.putAll(startSolverChannelProps);
         env.putAll(stopSolverChannelProps);
@@ -42,6 +43,7 @@ public class KafkaTestResourceLifecycleManager implements QuarkusTestResourceLif
         env.putAll(removeCallChannelProps);
         env.putAll(prolongCallChannelProps);
         env.putAll(bestSolutionChannelProps);
+        env.putAll(errorChannelProps);
         return env;
     }
 

@@ -19,6 +19,7 @@ package org.acme.callcenter.messaging;
 import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 
+import org.acme.callcenter.KafkaTestResourceLifecycleManager;
 import org.acme.callcenter.message.StopSolverEvent;
 import org.junit.jupiter.api.Test;
 
