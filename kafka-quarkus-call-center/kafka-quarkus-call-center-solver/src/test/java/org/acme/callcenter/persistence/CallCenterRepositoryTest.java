@@ -16,19 +16,24 @@
 
 package org.acme.callcenter.persistence;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 
 import org.acme.callcenter.domain.Agent;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.domain.Skill;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -37,7 +42,14 @@ public class CallCenterRepositoryTest {
     @Inject
     CallCenterRepository callCenterRepository;
 
+    @BeforeEach
+    @Transactional
+    void cleanUp() {
+        callCenterRepository.deleteAll();
+    }
+
     @Test
+    @TestTransaction
     void save_load_update() {
         Set<Skill> skills = EnumSet.of(Skill.CAR_INSURANCE, Skill.ENGLISH);
         Call call1 = new Call(1L, "123-456-789", skills, Duration.ofSeconds(10));
@@ -48,25 +60,25 @@ public class CallCenterRepositoryTest {
         call1.setNextCall(call2);
         call1.setAgent(agent);
         call2.setAgent(agent);
+        CallCenter initialCallCenter = new CallCenter(Arrays.asList(agent, agent2), Arrays.asList(call1, call2));
 
-        CallCenter callCenter = new CallCenter(Arrays.asList(agent, agent2), Arrays.asList(call1, call2));
+        callCenterRepository.save(1L, initialCallCenter);
+        CallCenter updatedCallCenter = callCenterRepository.load(1L).get();
 
-        callCenterRepository.save(1L, callCenter);
-
-        CallCenter loadedCallCenter = callCenterRepository.load(1L).get();
         Call call3 = new Call(3L, "123-456-657", skills, Duration.ofSeconds(10));
-        call3.setAgent(loadedCallCenter.getAgents().get(0));
-        loadedCallCenter.getAgents().get(0).getNextCall().getNextCall().setNextCall(call3);
-        loadedCallCenter.getCalls().add(call3);
+        call3.setAgent(updatedCallCenter.getAgents().get(0));
+        updatedCallCenter.getAgents().get(0).getNextCall().getNextCall().setNextCall(call3);
+        updatedCallCenter.getCalls().add(call3);
 
         Call call4 = new Call(4L, "6565-547-871", skills, Duration.ofSeconds(10));
-        call4.setAgent(loadedCallCenter.getAgents().get(1));
-        call4.setPreviousCallOrAgent(loadedCallCenter.getAgents().get(1));
-        loadedCallCenter.getAgents().get(1).setNextCall(call4);
-        loadedCallCenter.getCalls().add(call4);
+        call4.setAgent(updatedCallCenter.getAgents().get(1));
+        call4.setPreviousCallOrAgent(updatedCallCenter.getAgents().get(1));
+        updatedCallCenter.getAgents().get(1).setNextCall(call4);
+        updatedCallCenter.getCalls().add(call4);
 
-        callCenterRepository.save(1, loadedCallCenter);
+        callCenterRepository.save(1, updatedCallCenter);
 
-        CallCenter newlyLoadedCalCenter = callCenterRepository.load(1L).get();
+        CallCenter finalCallCenter = callCenterRepository.load(1L).get();
+        assertThat(finalCallCenter).usingRecursiveComparison().isEqualTo(updatedCallCenter);
     }
 }

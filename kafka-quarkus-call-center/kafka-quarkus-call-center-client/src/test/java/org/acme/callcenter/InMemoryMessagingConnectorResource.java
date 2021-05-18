@@ -19,23 +19,25 @@ package org.acme.callcenter;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.acme.callcenter.message.CallCenterChannelNames;
+
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import io.smallrye.reactive.messaging.connectors.InMemoryConnector;
 
-public class KafkaTestResourceLifecycleManager implements QuarkusTestResourceLifecycleManager {
+public class InMemoryMessagingConnectorResource implements QuarkusTestResourceLifecycleManager {
 
     @Override
     public Map<String, String> start() {
         Map<String, String> env = new HashMap<>();
-        // incoming channels
-        Map<String, String> startSolverChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("start_solver");
-        Map<String, String> stopSolverChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("stop_solver");
-        Map<String, String> addCallChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("add_call");
-        Map<String, String> removeCallChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("remove_call");
-        Map<String, String> prolongCallChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory("prolong_call");
-        // outgoing channels
-        Map<String, String> bestSolutionChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory("best_solution");
-        Map<String, String> errorChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory("error");
+        // Outgoing channels.
+        Map<String, String> startSolverChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.START_SOLVER);
+        Map<String, String> stopSolverChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.STOP_SOLVER);
+        Map<String, String> addCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.ADD_CALL);
+        Map<String, String> removeCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.REMOVE_CALL);
+        Map<String, String> prolongCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.PROLONG_CALL);
+        // Incoming channels.
+        Map<String, String> bestSolutionChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory(CallCenterChannelNames.BEST_SOLUTION);
+        Map<String, String> errorChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory(CallCenterChannelNames.ERROR);
 
         env.putAll(startSolverChannelProps);
         env.putAll(stopSolverChannelProps);

@@ -18,6 +18,7 @@ package org.acme.callcenter.domain;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -29,18 +30,26 @@ import org.optaplanner.core.api.domain.solution.ProblemFactCollectionProperty;
 import org.optaplanner.core.api.domain.valuerange.ValueRangeProvider;
 import org.optaplanner.core.api.score.buildin.hardsoft.HardSoftScore;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 @PlanningSolution
 public class CallCenter {
 
+    public static CallCenter emptyCallCenter() {
+        return new CallCenter();
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long lastChangeId;
 
     @ProblemFactCollectionProperty
     @ValueRangeProvider(id = "agentRange")
-    private List<Agent> agents;
+    private List<Agent> agents = new ArrayList<>();
 
     @PlanningEntityCollectionProperty
     @ValueRangeProvider(id = "callRange")
-    private List<Call> calls;
+    private List<Call> calls = new ArrayList<>();
 
     @PlanningScore
     private HardSoftScore score;

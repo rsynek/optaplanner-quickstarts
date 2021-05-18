@@ -52,4 +52,12 @@ public abstract class PersistableProblemFactChange implements ProblemFactChange<
     public long getProblemId() {
         return problemId;
     }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "{" +
+                "id=" + id +
+                ", problemId=" + problemId +
+                '}';
+    }
 }

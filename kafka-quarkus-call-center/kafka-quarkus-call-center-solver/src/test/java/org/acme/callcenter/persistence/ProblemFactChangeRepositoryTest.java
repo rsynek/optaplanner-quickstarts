@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.List;
 
 import javax.inject.Inject;
+import javax.transaction.Transactional;
 
 import org.acme.callcenter.change.AddCallProblemFactChange;
 import org.acme.callcenter.change.PersistableProblemFactChange;
@@ -32,6 +33,8 @@ import org.acme.callcenter.change.ProlongCallProblemFactChange;
 import org.acme.callcenter.change.RemoveCallProblemFactChange;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.Skill;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.quarkus.test.TestTransaction;
@@ -44,6 +47,12 @@ class ProblemFactChangeRepositoryTest {
 
     @Inject
     ProblemFactChangeRepository problemFactChangeRepository;
+
+    @BeforeEach
+    @Transactional
+    void cleanUp() {
+        problemFactChangeRepository.deleteAll();
+    }
 
     @Test
     @TestTransaction
@@ -80,6 +89,10 @@ class ProblemFactChangeRepositoryTest {
         problemFactChangeRepository.save(pfcToPersist);
 
         PersistableProblemFactChange foundPfc = problemFactChangeRepository.listAll().get(0);
-        assertThat(foundPfc).usingRecursiveComparison().isEqualTo(pfcToPersist);
+        assertThat(foundPfc.getProblemId()).isEqualTo(PROBLEM_ID);
+        assertThat(foundPfc).isInstanceOf(AddCallProblemFactChange.class);
+        AddCallProblemFactChange addCallProblemFactChange = (AddCallProblemFactChange) foundPfc;
+        Call persistedCall = addCallProblemFactChange.getCall();
+        assertThat(persistedCall.getId()).isEqualTo(call.getId());
     }
 }

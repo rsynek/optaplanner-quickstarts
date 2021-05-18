@@ -1,4 +1,4 @@
-/*
+package org.acme.callcenter.domain;/*
  * Copyright 2021 Red Hat, Inc. and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,16 @@
  */
 
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Arrays;
+import java.util.Collections;
+
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.optaplanner.persistence.jackson.api.OptaPlannerJacksonModule;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -31,9 +38,9 @@ public class CallCenterMarshallingTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.registerModule(OptaPlannerJacksonModule.createModule());
     }
-/*
+
     @Test
-    void marshallingAndUnmarshalling() throws JsonProcessingException {
+    void marshall_unmarshall() throws JsonProcessingException {
         Call call = new Call(1L, "123-456-789");
         Agent smith = new Agent(2L,"John Smith");
         call.setPreviousCallOrAgent(smith);
@@ -45,11 +52,10 @@ public class CallCenterMarshallingTest {
         secondCall.setAgent(smith);
         secondCall.setPreviousCallOrAgent(call);
 
-        CallCenter callCenter = new CallCenter(EnumSet.allOf(Skill.class), Collections.singletonList(smith), Arrays.asList(call, secondCall));
-
+        CallCenter callCenter = new CallCenter(Collections.singletonList(smith), Arrays.asList(call, secondCall));
         String callCenterJson = objectMapper.writeValueAsString(callCenter);
-
         CallCenter unmarshalledCallCenter = objectMapper.readValue(callCenterJson, CallCenter.class);
-        System.out.println(unmarshalledCallCenter);
-    }*/
+
+        assertThat(unmarshalledCallCenter).usingRecursiveComparison().isEqualTo(callCenter);
+    }
 }

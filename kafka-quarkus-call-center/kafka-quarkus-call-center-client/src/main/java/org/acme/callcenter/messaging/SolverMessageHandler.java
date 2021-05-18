@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.acme.callcenter.service;
+package org.acme.callcenter.messaging;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -31,6 +31,7 @@ import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.message.AddCallEvent;
 import org.acme.callcenter.message.BestSolutionEvent;
+import org.acme.callcenter.message.CallCenterChannelNames;
 import org.acme.callcenter.message.ErrorEvent;
 import org.acme.callcenter.message.ProlongCallEvent;
 import org.acme.callcenter.message.RemoveCallEvent;
@@ -58,26 +59,26 @@ public class SolverMessageHandler {
     CallCenterRepository callCenterRepository;
 
     @Inject
-    @Channel("start_solver")
+    @Channel(CallCenterChannelNames.START_SOLVER)
     Emitter<StartSolverEvent> startSolverEventEmitter;
 
     @Inject
-    @Channel("stop_solver")
+    @Channel(CallCenterChannelNames.STOP_SOLVER)
     Emitter<StopSolverEvent> stopSolverEventEmitter;
 
     @Inject
-    @Channel("add_call")
+    @Channel(CallCenterChannelNames.ADD_CALL)
     Emitter<AddCallEvent> addCallEventEmitter;
 
     @Inject
-    @Channel("remove_call")
+    @Channel(CallCenterChannelNames.REMOVE_CALL)
     Emitter<RemoveCallEvent> removeCallEventEmitter;
 
     @Inject
-    @Channel("prolong_call")
+    @Channel(CallCenterChannelNames.PROLONG_CALL)
     Emitter<ProlongCallEvent> prolongCallEventEmitter;
 
-    @Incoming("best_solution")
+    @Incoming(CallCenterChannelNames.BEST_SOLUTION)
     @Blocking
     public void handleBestSolutionEvent(BestSolutionEvent bestSolutionEvent) {
         long eventProblemId = Objects.requireNonNull(bestSolutionEvent.getProblemId());
@@ -97,8 +98,8 @@ public class SolverMessageHandler {
         }
     }
 
-    @Incoming("error")
-    @Acknowledgment(Acknowledgment.Strategy.PRE_PROCESSING)
+    @Incoming(CallCenterChannelNames.ERROR)
+    @Acknowledgment(Acknowledgment.Strategy.MANUAL)
     public CompletionStage<Void> handleErrorEvent(Message<ErrorEvent> errorEventMessage) {
         ErrorEvent errorEvent = errorEventMessage.getPayload();
         long eventProblemId = Objects.requireNonNull(errorEvent.getProblemId());
@@ -107,7 +108,6 @@ public class SolverMessageHandler {
             throw new IllegalStateException("Solving failed with exception class ("
                     + errorEvent.getExceptionClassName()
                     + ") and message (" + errorEvent.getExceptionMessage() + ").");
-
         } else { // The message has been read, but does not concern this client.
             return errorEventMessage.ack();
         }

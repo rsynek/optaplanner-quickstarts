@@ -16,6 +16,7 @@
 
 package org.acme.callcenter.solver;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -64,13 +65,23 @@ public class SolverManager {
         this.managedExecutor = executorService;
     }
 
-    private void pinCallAssignedToAgents(Collection<Call> calls) {
-        List<ProblemFactChange<CallCenter>> pinCallProblemFactChanges = calls.stream()
-                .filter(call -> !call.isPinned()
-                        && call.getPreviousCallOrAgent() != null
-                        && call.getPreviousCallOrAgent() instanceof Agent)
-                .map(call1 -> new PinCallProblemFactChange(call1))
-                .collect(Collectors.toList());
+    /**
+     * Pins first calls assigned to agents. Changes the best solution and applies the planning pin to working solution
+     * via {@link PinCallProblemFactChange}.
+     * @param bestSolution best solution that might contain calls which should be pinned.
+     */
+    private void pinCallAssignedToAgents(CallCenter bestSolution) {
+        Collection<Call> calls = bestSolution.getCalls();
+        List<ProblemFactChange<CallCenter>> pinCallProblemFactChanges = new ArrayList<>();
+        calls.forEach(call -> {
+            if (!call.isPinned()
+                    && call.getPreviousCallOrAgent() != null
+                    && call.getPreviousCallOrAgent() instanceof Agent) {
+                call.setPinned(true);
+                call.setPickUpTime(LocalTime.now());
+                pinCallProblemFactChanges.add(new PinCallProblemFactChange(call));
+            }
+        });
         solver.addProblemFactChanges(pinCallProblemFactChanges);
     }
 
@@ -84,7 +95,7 @@ public class SolverManager {
             solver.addEventListener(event -> {
                 if (event.isEveryProblemFactChangeProcessed() && event.getNewBestScore().isSolutionInitialized()) {
                     waitingProblemFactChanges.clear();
-                    pinCallAssignedToAgents(event.getNewBestSolution().getCalls());
+                    pinCallAssignedToAgents(event.getNewBestSolution());
                     bestSolutionChangedEventConsumer.accept(event);
                 }
             });
@@ -107,6 +118,7 @@ public class SolverManager {
 
     public synchronized void stopSolving() {
         solving.set(false);
+        LOGGER.debug("Stopping a solver.");
         if (completableSolverFuture != null) {
             solver.terminateEarly();
             try {
@@ -126,6 +138,7 @@ public class SolverManager {
     }
 
     public synchronized void registerProblemFactChange(ProblemFactChange<CallCenter> problemFactChange) {
+        LOGGER.debug("Registering a problem fact change (" + problemFactChange + ").");
         waitingProblemFactChanges.add(problemFactChange);
         if (isSolving()) {
             assertSolverIsAlive();
@@ -134,6 +147,7 @@ public class SolverManager {
     }
 
     public synchronized void registerProblemFactChanges(List<ProblemFactChange<CallCenter>> problemFactChanges) {
+        LOGGER.debug("Registering multiple (" + problemFactChanges.size() + ") problem fact changes.");
         waitingProblemFactChanges.addAll(problemFactChanges);
         if (isSolving()) {
             assertSolverIsAlive();

@@ -17,6 +17,7 @@
 package org.acme.callcenter.rest;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -34,14 +35,12 @@ import org.acme.callcenter.persistence.CallCenterRepository;
 import org.acme.callcenter.rest.dto.AgentDto;
 import org.acme.callcenter.rest.dto.CallCenterDto;
 import org.acme.callcenter.service.SimulationService;
-import org.acme.callcenter.service.SolverMessageHandler;
+import org.acme.callcenter.messaging.SolverMessageHandler;
 
 import io.quarkus.runtime.StartupEvent;
 
 @Path("/call-center")
 public class CallCenterResource {
-
-    private AtomicReference<CallCenter> bestSolution = new AtomicReference<>();
 
     @Inject
     SolverMessageHandler solverMessageHandler;
@@ -58,13 +57,16 @@ public class CallCenterResource {
     public void setupDemoData(@Observes StartupEvent startupEvent) {
         CallCenter callCenter = dataGenerator.generateCallCenter();
         callCenterRepository.save(DataGenerator.PROBLEM_ID, callCenter);
-        bestSolution.set(callCenter);
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public CallCenterDto get() {
-        CallCenterDto callCenterDto = convert(bestSolution.get());
+        Optional<CallCenter> callCenterOptional = callCenterRepository.load(DataGenerator.PROBLEM_ID);
+        if (callCenterOptional.isEmpty()) {
+            throw new IllegalStateException("No Call Center record found in the repository (" + DataGenerator.PROBLEM_ID + ")");
+        }
+        CallCenterDto callCenterDto = convert(callCenterOptional.get());
         callCenterDto.setSolving(solverMessageHandler.isSolving());
         return callCenterDto;
     }
@@ -78,7 +80,6 @@ public class CallCenterResource {
     @Path("solve")
     public void solve() {
         solverMessageHandler.startSolving(DataGenerator.PROBLEM_ID, callCenter -> {
-            bestSolution.set(callCenter);
             simulationService.onNewBestSolution(callCenter);
         });
         simulationService.startSimulation();

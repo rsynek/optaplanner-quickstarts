@@ -24,7 +24,7 @@ import javax.ws.rs.PathParam;
 
 import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.service.SimulationService;
-import org.acme.callcenter.service.SolverMessageHandler;
+import org.acme.callcenter.messaging.SolverMessageHandler;
 
 @Path("/call")
 public class CallResource {
@@ -37,7 +37,7 @@ public class CallResource {
 
     @DELETE
     @Path("{id}")
-    public void deleteCall(@PathParam("id") long id) {
+    public void removeCall(@PathParam("id") long id) {
         solverMessageHandler.removeCall(DataGenerator.PROBLEM_ID, id);
     }
 

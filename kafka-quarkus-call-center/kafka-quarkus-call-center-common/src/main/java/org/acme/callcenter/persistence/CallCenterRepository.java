@@ -43,6 +43,7 @@ public class CallCenterRepository implements PanacheRepository<CallCenterRecord>
         }
     }
 
+    @Transactional
     public Optional<Long> getFirstActiveId() {
         return find("active = true").firstResultOptional()
                 .map(CallCenterRecord::getProblemId);

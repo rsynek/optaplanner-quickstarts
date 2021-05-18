@@ -21,8 +21,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+import javax.annotation.PostConstruct;
+import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
@@ -40,6 +44,7 @@ import org.slf4j.LoggerFactory;
 
 import io.quarkus.runtime.StartupEvent;
 
+@ApplicationScoped
 public class SolverService {
 
     private static final int NOT_SOLVING_PROBLEM_ID = -1;
@@ -60,11 +65,30 @@ public class SolverService {
 
     private final AtomicLong currentProblemId = new AtomicLong(NOT_SOLVING_PROBLEM_ID);
 
+    @PostConstruct
+    public void boot(/*@Observes StartupEvent startupEvent*/) {
+        // TODO: Avoid duplicate solving of the same problemId with multiple running pods.
+        //  Add a value of the HOSTNAME environment variable as another DB table column and use it in the query.
+        //  Requires statefulSets https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/.
+        Optional<Long> activeCallCenterProblemId = callCenterRepository.getFirstActiveId();
+        if (activeCallCenterProblemId.isPresent()) {
+            long problemId = activeCallCenterProblemId.get();
+            LOGGER.info("Found an active input problem (" + problemId + ") in the repository.");
+            // Start solving and apply all the waiting PFCs.
+            startSolving(problemId, true);
+        }
+    }
+
     public boolean isSolvingProblem(long problemId) {
+        LOGGER.debug("is solving: " + currentProblemId.get());
         return currentProblemId.get() == problemId;
     }
 
     public synchronized void startSolving(long problemId) {
+        startSolving(problemId, false);
+    }
+
+    private void startSolving(long problemId, boolean expectedState) {
         if (currentProblemId.get() != NOT_SOLVING_PROBLEM_ID) { // Skip if this pod is already solving a different problemId.
             return;
         }
@@ -75,9 +99,10 @@ public class SolverService {
         }
 
         // Check if the problemId has been already taken by a different pod.
-        if (callCenterRepository.compareAndSetState(problemId, false, true)) {
+        if (callCenterRepository.compareAndSetState(problemId, expectedState, true)) {
             LOGGER.info("Starting solving an input problem (" + problemId + ").");
-            currentProblemId.set(problemId);
+            currentProblemId.compareAndSet(NOT_SOLVING_PROBLEM_ID, problemId);
+            LOGGER.info("currentProblemId [1] (" + currentProblemId.get() + ").");
             CallCenter inputProblem = inputProblemOptional.get();
             solverManager.startSolving(inputProblem,
                     bestSolutionChangedEvent -> {
@@ -87,6 +112,7 @@ public class SolverService {
                         messageSender.sendErrorEvent(problemId, throwable.getClass().getName(), throwable.getMessage());
                     });
             applyWaitingProblemFactChanges(problemId, inputProblem.getLastChangeId());
+            LOGGER.info("currentProblemId [2] (" + currentProblemId.get() + ").");
         }
     }
 
@@ -124,20 +150,10 @@ public class SolverService {
     }
 
     public void stopSolving(long problemId) {
+        LOGGER.info("Stopping solving.");
         if (currentProblemId.compareAndSet(problemId, NOT_SOLVING_PROBLEM_ID)) {
             callCenterRepository.compareAndSetState(problemId, true, false);
             solverManager.stopSolving();
-        }
-    }
-
-    public void boot(@Observes StartupEvent startupEvent) {
-        // TODO: Avoid duplicate solving of the same problemId with multiple running pods.
-        Optional<Long> activeCallCenterProblemId = callCenterRepository.getFirstActiveId();
-        if (activeCallCenterProblemId.isPresent()) {
-            long problemId = activeCallCenterProblemId.get();
-            LOGGER.info("Found an active input problem (" + problemId + ") in the repository.");
-            // Start solving and apply all the waiting PFCs.
-            startSolving(problemId);
         }
     }
 

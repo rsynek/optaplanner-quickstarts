@@ -32,6 +32,7 @@ import javax.inject.Inject;
 import org.acme.callcenter.data.DataGenerator;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
+import org.acme.callcenter.messaging.SolverMessageHandler;
 
 @ApplicationScoped
 public class SimulationService {

@@ -25,36 +25,43 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 
+import javax.enterprise.inject.Any;
 import javax.inject.Inject;
 
-import org.acme.callcenter.KafkaTestResourceLifecycleManager;
+import org.acme.callcenter.InMemoryMessagingConnectorResource;
 import org.acme.callcenter.domain.Agent;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.domain.Skill;
-import org.acme.callcenter.messaging.CallCenterMessageSender;
+import org.acme.callcenter.message.BestSolutionEvent;
+import org.acme.callcenter.message.CallCenterChannelNames;
 import org.acme.callcenter.persistence.CallCenterRepository;
 import org.acme.callcenter.persistence.ProblemFactChangeRepository;
+import org.eclipse.microprofile.reactive.messaging.Message;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import io.quarkus.test.TestTransaction;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.junit.mockito.InjectMock;
+import io.smallrye.reactive.messaging.connectors.InMemoryConnector;
+import io.smallrye.reactive.messaging.connectors.InMemorySink;
 
 @QuarkusTest
-@QuarkusTestResource(KafkaTestResourceLifecycleManager.class)
+@QuarkusTestResource(InMemoryMessagingConnectorResource.class)
 public class SolverServiceTest {
 
     private static final long PROBLEM_ID = 1L;
 
-    @InjectMock
-    CallCenterMessageSender messageSender;
+    @Any
+    @Inject
+    InMemoryConnector connector;
 
     @Inject
     ProblemFactChangeRepository problemFactChangeRepository;
@@ -66,6 +73,7 @@ public class SolverServiceTest {
     SolverService solverService;
 
     @Test
+    @TestTransaction
     void start_when_problem_already_active_skip() {
         CallCenterRepository callCenterRepositoryMock = Mockito.mock(CallCenterRepository.class);
         QuarkusMock.installMockForType(callCenterRepositoryMock, CallCenterRepository.class);
@@ -77,6 +85,7 @@ public class SolverServiceTest {
     }
 
     @Test
+    @TestTransaction
     void start_no_input_problem_found() {
         CallCenterRepository callCenterRepositoryMock = Mockito.mock(CallCenterRepository.class);
         QuarkusMock.installMockForType(callCenterRepositoryMock, CallCenterRepository.class);
@@ -98,7 +107,7 @@ public class SolverServiceTest {
         // Start solving and send problem fact changes.
         solverService.startSolving(PROBLEM_ID);
 
-        Call call1 = new Call(1L,"126-498-784", skills, Duration.ofSeconds(10));
+        Call call1 = new Call(1L, "126-498-784", skills, Duration.ofSeconds(10));
         Call call2 = new Call(2L, "657-787-246", skills, Duration.ofSeconds(10));
         solverService.addCall(PROBLEM_ID, call1);
         solverService.addCall(PROBLEM_ID, call2);
@@ -108,13 +117,21 @@ public class SolverServiceTest {
                 .timeout(Duration.ofSeconds(5))
                 .until(() -> {
                     Optional<CallCenter> solution = callCenterRepository.load(PROBLEM_ID);
-                    return solution.isPresent() && solution.get().getCalls().size() == 2;
+                    if (solution.isPresent()) {
+                        Long lastChangeId = solution.get().getLastChangeId();
+                        return lastChangeId != null && lastChangeId == 2L;
+                    }
+                    return false;
                 });
 
         Optional<CallCenter> solutionOptional = callCenterRepository.load(PROBLEM_ID);
         assertThat(solutionOptional).isNotEmpty();
-        assertThat(solutionOptional.get().getLastChangeId()).isEqualTo(2L);
         assertThat(problemFactChangeRepository.findByIdGreaterThan(PROBLEM_ID, 0L)).isEmpty();
-        Mockito.verify(messageSender, Mockito.atLeastOnce()).sendBestSolutionEvent(PROBLEM_ID);
+
+        InMemorySink<BestSolutionEvent> bestSolutionChannel = connector.sink(CallCenterChannelNames.BEST_SOLUTION);
+        List<? extends Message<BestSolutionEvent>> receivedEvents = bestSolutionChannel.received();
+        assertThat(receivedEvents).isNotEmpty();
+        BestSolutionEvent bestSolutionEvent = receivedEvents.get(0).getPayload();
+        assertThat(bestSolutionEvent.getProblemId()).isEqualTo(PROBLEM_ID);
     }
 }

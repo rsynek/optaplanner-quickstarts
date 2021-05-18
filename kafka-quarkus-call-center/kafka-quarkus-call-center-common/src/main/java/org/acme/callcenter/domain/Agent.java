@@ -19,6 +19,7 @@ package org.acme.callcenter.domain;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -37,14 +38,14 @@ public class Agent extends PreviousCallOrAgent {
         // Required by OptaPlanner.
     }
 
-    public Agent(long id, String name, Set<Skill> skills) {
+    public Agent(long id, String name, Collection<Skill> skills) {
         super(id);
         this.name = name;
         this.skills = new ArrayList<>(skills);
     }
 
     public Agent(long id, String name, Skill... skills) {
-        this(id, name, EnumSet.copyOf(Arrays.asList(skills)));
+        this(id, name, Arrays.asList(skills));
     }
 
     @JsonIgnore
