@@ -16,7 +16,7 @@
 
 package org.acme.callcenter.message;
 
-public class StopSolverEvent extends AbstractSolverEvent {
+public class StopSolverEvent extends SolverEvent {
 
     public StopSolverEvent() {
         // Required by Jackson.
@@ -24,5 +24,10 @@ public class StopSolverEvent extends AbstractSolverEvent {
 
     public StopSolverEvent(long problemId) {
         super(problemId);
+    }
+
+    @Override
+    public Type getType() {
+        return Type.STOP;
     }
 }

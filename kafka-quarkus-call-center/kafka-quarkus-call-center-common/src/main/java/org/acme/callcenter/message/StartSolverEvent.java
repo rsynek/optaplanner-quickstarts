@@ -16,7 +16,7 @@
 
 package org.acme.callcenter.message;
 
-public class StartSolverEvent extends AbstractSolverEvent{
+public class StartSolverEvent extends SolverEvent {
 
     public StartSolverEvent() {
         // Required by Jackson.
@@ -24,5 +24,10 @@ public class StartSolverEvent extends AbstractSolverEvent{
 
     public StartSolverEvent(long problemId) {
         super(problemId);
+    }
+
+    @Override
+    public Type getType() {
+        return Type.START;
     }
 }

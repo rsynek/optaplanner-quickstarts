@@ -16,7 +16,7 @@
 
 package org.acme.callcenter.message;
 
-public class RemoveCallEvent extends AbstractSolverEvent {
+public class RemoveCallEvent extends SolverEvent {
 
     private long callId;
 
@@ -31,5 +31,10 @@ public class RemoveCallEvent extends AbstractSolverEvent {
 
     public long getCallId() {
         return callId;
+    }
+
+    @Override
+    public Type getType() {
+        return Type.REMOVE_CALL;
     }
 }

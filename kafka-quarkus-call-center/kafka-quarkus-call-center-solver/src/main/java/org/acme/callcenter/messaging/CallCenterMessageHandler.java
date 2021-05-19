@@ -19,15 +19,11 @@ package org.acme.callcenter.messaging;
 import java.util.Objects;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 
-import org.acme.callcenter.message.AddCallEvent;
 import org.acme.callcenter.message.CallCenterChannelNames;
-import org.acme.callcenter.message.ProlongCallEvent;
-import org.acme.callcenter.message.RemoveCallEvent;
-import org.acme.callcenter.message.StartSolverEvent;
-import org.acme.callcenter.message.StopSolverEvent;
-import org.acme.callcenter.service.SolverService;
+import org.acme.callcenter.message.SolverEvent;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 
 import io.smallrye.common.annotation.Blocking;
@@ -36,46 +32,19 @@ import io.smallrye.common.annotation.Blocking;
 public class CallCenterMessageHandler {
 
     @Inject
-    SolverService solverService;
+    Instance<SolverEventHandler> solverEventHandlers;
 
-    @Incoming(CallCenterChannelNames.START_SOLVER)
+    @Incoming(CallCenterChannelNames.SOLVER)
     @Blocking
-    public void handleStartSolver(StartSolverEvent startSolverEvent) {
-        long eventProblemId = Objects.requireNonNull(startSolverEvent).getProblemId();
-        solverService.startSolving(eventProblemId);
+    public void handleSolverEvent(SolverEvent solverEvent) {
+        Objects.requireNonNull(solverEvent);
+        findHandler(solverEvent).handleEvent(solverEvent);
     }
 
-    @Incoming(CallCenterChannelNames.STOP_SOLVER)
-    @Blocking
-    public void handleStopSolver(StopSolverEvent stopSolverEvent) {
-        long eventProblemId = Objects.requireNonNull(stopSolverEvent).getProblemId();
-        solverService.stopSolving(eventProblemId);
-    }
-
-    @Incoming(CallCenterChannelNames.ADD_CALL)
-    @Blocking
-    public void handleAddCall(AddCallEvent addCallEvent) {
-        long eventProblemId = Objects.requireNonNull(addCallEvent).getProblemId();
-        if (solverService.isSolvingProblem(eventProblemId)) {
-            solverService.addCall(eventProblemId, addCallEvent.getCall());
-        }
-    }
-
-    @Incoming(CallCenterChannelNames.PROLONG_CALL)
-    @Blocking
-    public void handleProlongCall(ProlongCallEvent prolongCallEvent) {
-        long eventProblemId = Objects.requireNonNull(prolongCallEvent).getProblemId();
-        if (solverService.isSolvingProblem(eventProblemId)) {
-            solverService.prolongCall(eventProblemId, prolongCallEvent.getCallId(), prolongCallEvent.getProlongation());
-        }
-    }
-
-    @Incoming(CallCenterChannelNames.REMOVE_CALL)
-    @Blocking
-    public void handleRemoveCall(RemoveCallEvent removeCallEvent) {
-        long eventProblemId = Objects.requireNonNull(removeCallEvent).getProblemId();
-        if (solverService.isSolvingProblem(eventProblemId)) {
-            solverService.removeCall(eventProblemId, removeCallEvent.getCallId());
-        }
+    private SolverEventHandler findHandler(SolverEvent solverEvent) {
+        return solverEventHandlers.stream()
+                .filter(solverEventHandler -> solverEventHandler.supports(solverEvent.getClass()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Unsupported solver event type (" + solverEvent.getClass() + ")."));
     }
 }

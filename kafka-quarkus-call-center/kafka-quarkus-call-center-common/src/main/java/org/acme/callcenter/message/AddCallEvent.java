@@ -18,7 +18,7 @@ package org.acme.callcenter.message;
 
 import org.acme.callcenter.domain.Call;
 
-public class AddCallEvent extends AbstractSolverEvent {
+public class AddCallEvent extends SolverEvent {
     private Call call;
 
     public AddCallEvent() {
@@ -32,5 +32,10 @@ public class AddCallEvent extends AbstractSolverEvent {
 
     public Call getCall() {
         return call;
+    }
+
+    @Override
+    public Type getType() {
+        return Type.ADD_CALL;
     }
 }

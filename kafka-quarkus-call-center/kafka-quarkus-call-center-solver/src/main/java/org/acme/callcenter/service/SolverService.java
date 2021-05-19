@@ -66,7 +66,7 @@ public class SolverService {
     private final AtomicLong currentProblemId = new AtomicLong(NOT_SOLVING_PROBLEM_ID);
 
     @PostConstruct
-    public void boot(/*@Observes StartupEvent startupEvent*/) {
+    public void boot() {
         // TODO: Avoid duplicate solving of the same problemId with multiple running pods.
         //  Add a value of the HOSTNAME environment variable as another DB table column and use it in the query.
         //  Requires statefulSets https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/.
@@ -102,7 +102,6 @@ public class SolverService {
         if (callCenterRepository.compareAndSetState(problemId, expectedState, true)) {
             LOGGER.info("Starting solving an input problem (" + problemId + ").");
             currentProblemId.compareAndSet(NOT_SOLVING_PROBLEM_ID, problemId);
-            LOGGER.info("currentProblemId [1] (" + currentProblemId.get() + ").");
             CallCenter inputProblem = inputProblemOptional.get();
             solverManager.startSolving(inputProblem,
                     bestSolutionChangedEvent -> {
@@ -112,7 +111,6 @@ public class SolverService {
                         messageSender.sendErrorEvent(problemId, throwable.getClass().getName(), throwable.getMessage());
                     });
             applyWaitingProblemFactChanges(problemId, inputProblem.getLastChangeId());
-            LOGGER.info("currentProblemId [2] (" + currentProblemId.get() + ").");
         }
     }
 
@@ -129,24 +127,30 @@ public class SolverService {
     }
 
     public void addCall(long problemId, Call call) {
-        PersistableProblemFactChange addCallProblemFactChange =
-                ProblemFactChangeFactory.addCallProblemFactChange(problemId, call);
-        problemFactChangeRepository.save(addCallProblemFactChange);
-        solverManager.registerProblemFactChange(addCallProblemFactChange);
+        if (isSolvingProblem(problemId)) {
+            PersistableProblemFactChange addCallProblemFactChange =
+                    ProblemFactChangeFactory.addCallProblemFactChange(problemId, call);
+            problemFactChangeRepository.save(addCallProblemFactChange);
+            solverManager.registerProblemFactChange(addCallProblemFactChange);
+        }
     }
 
     public void removeCall(long problemId, long callId) {
-        PersistableProblemFactChange removeCallProblemFactChange =
-                ProblemFactChangeFactory.removeCallProblemFactChange(problemId, callId);
-        problemFactChangeRepository.save(removeCallProblemFactChange);
-        solverManager.registerProblemFactChange(removeCallProblemFactChange);
+        if (isSolvingProblem(problemId)) {
+            PersistableProblemFactChange removeCallProblemFactChange =
+                    ProblemFactChangeFactory.removeCallProblemFactChange(problemId, callId);
+            problemFactChangeRepository.save(removeCallProblemFactChange);
+            solverManager.registerProblemFactChange(removeCallProblemFactChange);
+        }
     }
 
     public void prolongCall(long problemId, long callId, Duration prolongation) {
-        PersistableProblemFactChange prolongCallProblemFactChange =
-                ProblemFactChangeFactory.prolongCallProblemFactChange(problemId, callId, prolongation);
-        problemFactChangeRepository.save(prolongCallProblemFactChange);
-        solverManager.registerProblemFactChange(prolongCallProblemFactChange);
+        if (isSolvingProblem(problemId)) {
+            PersistableProblemFactChange prolongCallProblemFactChange =
+                    ProblemFactChangeFactory.prolongCallProblemFactChange(problemId, callId, prolongation);
+            problemFactChangeRepository.save(prolongCallProblemFactChange);
+            solverManager.registerProblemFactChange(prolongCallProblemFactChange);
+        }
     }
 
     public void stopSolving(long problemId) {

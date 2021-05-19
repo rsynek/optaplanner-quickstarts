@@ -18,7 +18,7 @@ package org.acme.callcenter.message;
 
 import java.time.Duration;
 
-public class ProlongCallEvent extends AbstractSolverEvent {
+public class ProlongCallEvent extends SolverEvent {
 
     private long callId;
     private Duration prolongation;
@@ -39,5 +39,10 @@ public class ProlongCallEvent extends AbstractSolverEvent {
 
     public Duration getProlongation() {
         return prolongation;
+    }
+
+    @Override
+    public Type getType() {
+        return Type.PROLONG_CALL;
     }
 }

@@ -19,6 +19,7 @@ package org.acme.callcenter.persistence;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.persistence.LockModeType;
 import javax.transaction.Transactional;
 
 import org.acme.callcenter.domain.CallCenter;

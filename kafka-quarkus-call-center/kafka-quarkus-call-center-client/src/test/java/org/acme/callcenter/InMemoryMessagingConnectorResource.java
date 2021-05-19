@@ -30,20 +30,12 @@ public class InMemoryMessagingConnectorResource implements QuarkusTestResourceLi
     public Map<String, String> start() {
         Map<String, String> env = new HashMap<>();
         // Outgoing channels.
-        Map<String, String> startSolverChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.START_SOLVER);
-        Map<String, String> stopSolverChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.STOP_SOLVER);
-        Map<String, String> addCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.ADD_CALL);
-        Map<String, String> removeCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.REMOVE_CALL);
-        Map<String, String> prolongCallChannelProps = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.PROLONG_CALL);
+        Map<String, String> solverChannel = InMemoryConnector.switchOutgoingChannelsToInMemory(CallCenterChannelNames.SOLVER);
         // Incoming channels.
         Map<String, String> bestSolutionChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory(CallCenterChannelNames.BEST_SOLUTION);
         Map<String, String> errorChannelProps = InMemoryConnector.switchIncomingChannelsToInMemory(CallCenterChannelNames.ERROR);
 
-        env.putAll(startSolverChannelProps);
-        env.putAll(stopSolverChannelProps);
-        env.putAll(addCallChannelProps);
-        env.putAll(removeCallChannelProps);
-        env.putAll(prolongCallChannelProps);
+        env.putAll(solverChannel);
         env.putAll(bestSolutionChannelProps);
         env.putAll(errorChannelProps);
         return env;

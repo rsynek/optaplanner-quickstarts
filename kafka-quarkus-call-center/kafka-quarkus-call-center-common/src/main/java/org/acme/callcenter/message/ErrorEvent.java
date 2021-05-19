@@ -16,8 +16,9 @@
 
 package org.acme.callcenter.message;
 
-public class ErrorEvent extends AbstractSolverEvent {
+public class ErrorEvent {
 
+    private long problemId;
     private String exceptionClassName;
     private String exceptionMessage;
 
@@ -26,9 +27,13 @@ public class ErrorEvent extends AbstractSolverEvent {
     }
 
     public ErrorEvent(long problemId, String exceptionClassName, String exceptionMessage) {
-        super(problemId);
+        this.problemId = problemId;
         this.exceptionClassName = exceptionClassName;
         this.exceptionMessage = exceptionMessage;
+    }
+
+    public long getProblemId() {
+        return problemId;
     }
 
     public String getExceptionClassName() {

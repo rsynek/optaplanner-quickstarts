@@ -16,13 +16,19 @@
 
 package org.acme.callcenter.message;
 
-public class BestSolutionEvent extends AbstractSolverEvent {
+public class BestSolutionEvent {
+
+    private long problemId;
 
     public BestSolutionEvent() {
         // Required by Jackson.
     }
 
     public BestSolutionEvent(long problemId) {
-        super(problemId);
+        this.problemId = problemId;
+    }
+
+    public long getProblemId() {
+        return problemId;
     }
 }

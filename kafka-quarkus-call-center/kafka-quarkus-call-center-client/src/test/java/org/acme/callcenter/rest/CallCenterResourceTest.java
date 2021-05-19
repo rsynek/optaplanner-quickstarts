@@ -49,7 +49,7 @@ public class CallCenterResourceTest {
     @Test
     void start_solving_sends_event() {
         callCenterResource.solve();
-        InMemorySink<StartSolverEvent> startSolverChannel = connector.sink(CallCenterChannelNames.START_SOLVER);
+        InMemorySink<StartSolverEvent> startSolverChannel = connector.sink(CallCenterChannelNames.SOLVER);
         List<? extends Message<StartSolverEvent>> receivedStartSolverEvents = startSolverChannel.received();
         assertThat(receivedStartSolverEvents).hasSize(1);
         StartSolverEvent startSolverEvent = receivedStartSolverEvents.get(0).getPayload();

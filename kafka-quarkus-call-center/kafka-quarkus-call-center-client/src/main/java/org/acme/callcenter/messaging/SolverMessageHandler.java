@@ -35,6 +35,7 @@ import org.acme.callcenter.message.CallCenterChannelNames;
 import org.acme.callcenter.message.ErrorEvent;
 import org.acme.callcenter.message.ProlongCallEvent;
 import org.acme.callcenter.message.RemoveCallEvent;
+import org.acme.callcenter.message.SolverEvent;
 import org.acme.callcenter.message.StartSolverEvent;
 import org.acme.callcenter.message.StopSolverEvent;
 import org.acme.callcenter.persistence.CallCenterRepository;
@@ -59,24 +60,8 @@ public class SolverMessageHandler {
     CallCenterRepository callCenterRepository;
 
     @Inject
-    @Channel(CallCenterChannelNames.START_SOLVER)
-    Emitter<StartSolverEvent> startSolverEventEmitter;
-
-    @Inject
-    @Channel(CallCenterChannelNames.STOP_SOLVER)
-    Emitter<StopSolverEvent> stopSolverEventEmitter;
-
-    @Inject
-    @Channel(CallCenterChannelNames.ADD_CALL)
-    Emitter<AddCallEvent> addCallEventEmitter;
-
-    @Inject
-    @Channel(CallCenterChannelNames.REMOVE_CALL)
-    Emitter<RemoveCallEvent> removeCallEventEmitter;
-
-    @Inject
-    @Channel(CallCenterChannelNames.PROLONG_CALL)
-    Emitter<ProlongCallEvent> prolongCallEventEmitter;
+    @Channel(CallCenterChannelNames.SOLVER)
+    Emitter<SolverEvent> solverEventEmitter;
 
     @Incoming(CallCenterChannelNames.BEST_SOLUTION)
     @Blocking
@@ -117,29 +102,34 @@ public class SolverMessageHandler {
         solving.set(true);
         this.bestSolutionConsumer = bestSolutionConsumer;
         StartSolverEvent startSolverEvent = new StartSolverEvent(problemId);
-        startSolverEventEmitter.send(startSolverEvent);
+        solverEventEmitter.send(startSolverEvent);
+    //    startSolverEventEmitter.send(startSolverEvent);
     }
 
     public void stopSolving(long problemId) {
         solving.set(false);
         bestSolutionConsumer = null;
         StopSolverEvent stopSolverEvent = new StopSolverEvent(problemId);
-        stopSolverEventEmitter.send(stopSolverEvent);
+        solverEventEmitter.send(stopSolverEvent);
+       // stopSolverEventEmitter.send(stopSolverEvent);
     }
 
     public void addCall(long problemId, Call call) {
         AddCallEvent addCallEvent = new AddCallEvent(problemId, call);
-        addCallEventEmitter.send(addCallEvent);
+        solverEventEmitter.send(addCallEvent);
+    //    addCallEventEmitter.send(addCallEvent);
     }
 
     public void removeCall(long problemId, long callId) {
         RemoveCallEvent removeCallEvent = new RemoveCallEvent(problemId, callId);
-        removeCallEventEmitter.send(removeCallEvent);
+        solverEventEmitter.send(removeCallEvent);
+     //   removeCallEventEmitter.send(removeCallEvent);
     }
 
     public void prolongCall(long problemId, long callId) {
         ProlongCallEvent prolongCallEvent = new ProlongCallEvent(problemId, callId, CALL_PROLONGATION_DURATION);
-        prolongCallEventEmitter.send(prolongCallEvent);
+        solverEventEmitter.send(prolongCallEvent);
+     //   prolongCallEventEmitter.send(prolongCallEvent);
     }
 
     public boolean isSolving() {
