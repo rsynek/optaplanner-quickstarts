@@ -21,13 +21,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.transaction.Transactional;
 
@@ -36,13 +33,12 @@ import org.acme.callcenter.change.ProblemFactChangeFactory;
 import org.acme.callcenter.domain.Call;
 import org.acme.callcenter.domain.CallCenter;
 import org.acme.callcenter.messaging.CallCenterMessageSender;
+import org.acme.callcenter.persistence.AsyncThrottlingBestSolutionRepository;
 import org.acme.callcenter.persistence.CallCenterRepository;
 import org.acme.callcenter.persistence.ProblemFactChangeRepository;
 import org.acme.callcenter.solver.SolverManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.quarkus.runtime.StartupEvent;
 
 @ApplicationScoped
 public class SolverService {
@@ -105,6 +101,8 @@ public class SolverService {
             CallCenter inputProblem = inputProblemOptional.get();
             solverManager.startSolving(inputProblem,
                     bestSolutionChangedEvent -> {
+                        // TODO: apply waiting changes to the best solution to avoid the propagation delay.
+
                         persistBestSolution(problemId, bestSolutionChangedEvent.getNewBestSolution());
                         messageSender.sendBestSolutionEvent(problemId);
                     }, throwable -> { // Send error to the client.
@@ -170,5 +168,17 @@ public class SolverService {
                     + ") from a repository. Last change Id (" + callCenter.getLastChangeId() + ").");
             problemFactChangeRepository.deleteByIdLesserThanOrEqualTo(callCenter.getLastChangeId());
         }
+    }
+
+    private void persistBestSolutionAsync(long problemId, CallCenter callCenter) {
+        AsyncThrottlingBestSolutionRepository<CallCenter, Long> repository = null;
+        repository.save(problemId, callCenter).handle((persisted, throwable) -> {
+            if (throwable != null) {
+                messageSender.sendErrorEvent(problemId, throwable.getClass().getName(), throwable.getMessage());
+            } else if (persisted) {
+                messageSender.sendBestSolutionEvent(problemId);
+            }
+            return null;
+        });
     }
 }
