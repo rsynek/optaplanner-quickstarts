@@ -20,6 +20,7 @@ import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -87,9 +88,22 @@ public class DemoDataGenerator {
         timeslotRepository.persist(timeslotList);
 
         List<Room> roomList = new ArrayList<>(3);
-        roomList.add(new Room("Room A"));
-        roomList.add(new Room("Room B"));
-        roomList.add(new Room("Room C"));
+        Room roomA = new Room("Room A");
+        Room roomB = new Room("Room B");
+        Room roomC = new Room("Room C");
+        /*
+            Distance matrix:
+            Room A  B  C
+            A    0 10 20
+            B   10  0 10
+            C   20 10  0
+         */
+        roomA.setDistances(Map.of(roomA, 0, roomB, 10, roomC, 20));
+        roomB.setDistances(Map.of(roomA, 10, roomB, 0, roomC, 10));
+        roomC.setDistances(Map.of(roomA, 20, roomB, 10, roomC, 0));
+        roomList.add(roomA);
+        roomList.add(roomB);
+        roomList.add(roomC);
         if (demoData == DemoData.LARGE) {
             roomList.add(new Room("Room D"));
             roomList.add(new Room("Room E"));

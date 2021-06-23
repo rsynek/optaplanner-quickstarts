@@ -16,9 +16,16 @@
 
 package org.acme.schooltimetabling.domain;
 
+import java.util.Map;
+
+import javax.persistence.CollectionTable;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.MapKeyColumn;
 
 import org.optaplanner.core.api.domain.lookup.PlanningId;
 
@@ -32,6 +39,12 @@ public class Room {
 
     private String name;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "distance_matrix",
+            joinColumns = {@JoinColumn(name = "room_id", referencedColumnName = "id")})
+    @MapKeyColumn(name = "room_id")
+    private Map<Room, Integer> distances;
+
     // No-arg constructor required for Hibernate
     public Room() {
     }
@@ -43,6 +56,14 @@ public class Room {
     public Room(long id, String name) {
         this(name);
         this.id = id;
+    }
+
+    public int getDistance(Room room) {
+        return distances.get(room);
+    }
+
+    public void setDistances(Map<Room, Integer> distances) {
+        this.distances = distances;
     }
 
     @Override

@@ -37,7 +37,8 @@ public class TimeTableConstraintProvider implements ConstraintProvider {
                 // Soft constraints
                 teacherRoomStability(constraintFactory),
                 teacherTimeEfficiency(constraintFactory),
-                studentGroupSubjectVariety(constraintFactory)
+                studentGroupSubjectVariety(constraintFactory),
+                minimizeDistanceForStudents(constraintFactory)
         };
     }
 
@@ -111,4 +112,18 @@ public class TimeTableConstraintProvider implements ConstraintProvider {
                 .penalize("Student group subject variety", HardSoftScore.ONE_SOFT);
     }
 
+    Constraint minimizeDistanceForStudents(ConstraintFactory constraintFactory) {
+        return constraintFactory
+                .from(Lesson.class)
+                .join(Lesson.class,
+                        Joiners.equal(Lesson::getStudentGroup),
+                        Joiners.equal((lesson) -> lesson.getTimeslot().getDayOfWeek()))
+                .filter((lesson1, lesson2) -> {
+                    Duration between = Duration.between(lesson1.getTimeslot().getEndTime(),
+                            lesson2.getTimeslot().getStartTime());
+                    return !between.isNegative() && between.compareTo(Duration.ofMinutes(30)) <= 0;
+                })
+                .penalize("Minimize distance for students", HardSoftScore.ONE_SOFT,
+                        (lesson1, lesson2) -> lesson1.getRoom().getDistance(lesson2.getRoom()));
+    }
 }
